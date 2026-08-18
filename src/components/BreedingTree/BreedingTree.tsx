@@ -71,13 +71,14 @@ export function BreedingTree({
 }: BreedingTreeProps) {
   const { t } = useTranslation()
   const layout = useMemo(() => computeTreeLayout(colors), [colors])
-  const { state, handlers, nativeHandlers, zoomIn, zoomOut, setView } = usePanZoom({
-    x: 0,
-    y: 0,
-    scale: 1,
-  })
   const containerRef = useRef<HTMLDivElement | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
+  // The SVG is what zoom anchors against: its box is the viewport the tree is
+  // seen through, and its pixel space is the transform's own.
+  const { state, handlers, nativeHandlers, zoomIn, zoomOut, setView } = usePanZoom(
+    { x: 0, y: 0, scale: 1 },
+    svgRef,
+  )
 
   // Wheel and touchmove are registered by hand because React registers both as
   // passive, where the `preventDefault()` that stops the page scrolling behind

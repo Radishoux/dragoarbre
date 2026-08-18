@@ -224,6 +224,20 @@ stops the page scrolling behind the tree is ignored and logs a console error.
 This was a live bug before the wheel binding changed: zoom still worked, so
 nothing looked broken, but the page scrolled underneath every gesture.
 
+**Zoom is anchored.** `translate(x, y) scale(s)` scales about the transform
+origin, so changing `s` alone slides every point toward it and the tree drifts
+sideways as you zoom out. Each zoom moves `x`/`y` by the scale ratio instead,
+holding one point still: the cursor for a wheel zoom, the pinch midpoint for a
+pinch, the viewport centre for the buttons.
+
+The same rewrite removed two latent faults. `onPointerMove` dereferenced the
+drag origin *inside* a `setState` updater, which runs after the handler
+returns — if a `pointerup` cleared the ref first, the updater threw and took
+the whole page down mid-drag. The origin is now read into a local first. And
+`onPointerDown`/`onTouchStart` used a `setState` updater as a getter for the
+current state, which is impure and runs twice in development; they read a ref
+that mirrors state instead.
+
 The opening view fits the **width** and anchors at the top rather than fitting
 both axes. Fitting both put the full tree at about 22% zoom, where a 12px label
 is unreadable; the view now opens like a document, generation 1 at the top, with
