@@ -32,8 +32,7 @@ a detail view for every color.
 
 ## Live site
 
-Deployed at `https://<owner>.github.io/dragoarbre/` once GitHub Pages is
-enabled for this repository (see [Deployment](#deployment) below).
+**[radishoux.github.io/dragoarbre](https://radishoux.github.io/dragoarbre/)**
 
 ## Quickstart
 
@@ -66,8 +65,9 @@ GitHub Pages.
 
 On every push to `main`, `.github/workflows/deploy.yml` runs the tests,
 builds the site, and deploys `dist/` to GitHub Pages via the official
-`actions/deploy-pages` action. **One-time setup required:** in this
-repository's Settings → Pages, set **Source** to **GitHub Actions**.
+`actions/deploy-pages` action — already enabled on this repository. If you
+fork this repo, you'll need the same **one-time setup**: in Settings →
+Pages, set **Source** to **GitHub Actions**.
 
 ## Disclaimer
 
