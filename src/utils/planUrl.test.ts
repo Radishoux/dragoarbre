@@ -7,10 +7,14 @@ import {
 } from '../core/planner'
 import {
   buildPlannerHash,
+  buildSpeciesSearch,
   DEFAULT_PLAN_URL_STATE,
+  DEFAULT_SPECIES,
   decodePlanUrl,
+  decodeSpecies,
   encodePlanUrl,
   type PlanUrlState,
+  planSpecies,
   QUANTITY_MAX,
   QUANTITY_MIN,
 } from './planUrl'
@@ -197,4 +201,147 @@ describe('buildPlannerHash', () => {
     const query = buildPlannerHash(state).split('?')[1] ?? ''
     expect(decodePlanUrl(new URLSearchParams(query))).toEqual(state)
   })
+})
+
+// Phase 3 added exactly one parameter, `species`. Everything above this line is
+// the phase 2 contract and passes untouched; everything below pins the new one.
+describe('decodeSpecies', () => {
+  test('an absent parameter gives the documented default', () => {
+    expect(decodeSpecies(params(''))).toBe(DEFAULT_SPECIES)
+    expect(DEFAULT_SPECIES).toBe('dragoturkey')
+  })
+
+  test('reads each of the three species', () => {
+    expect(decodeSpecies(params('species=dragoturkey'))).toBe('dragoturkey')
+    expect(decodeSpecies(params('species=seemyool'))).toBe('seemyool')
+    expect(decodeSpecies(params('species=rhineetle'))).toBe('rhineetle')
+  })
+
+  test('an unknown or empty species falls back to the default', () => {
+    expect(decodeSpecies(params('species=unicorn'))).toBe(DEFAULT_SPECIES)
+    expect(decodeSpecies(params('species='))).toBe(DEFAULT_SPECIES)
+    expect(decodeSpecies(params('species=SEEMYOOL'))).toBe(DEFAULT_SPECIES)
+  })
+
+  test('ignores the other planner parameters', () => {
+    expect(decodeSpecies(params('target=seemyool-almond&qty=3'))).toBe(DEFAULT_SPECIES)
+  })
+})
+
+describe('buildSpeciesSearch', () => {
+  test('the default species produces no query at all', () => {
+    expect(buildSpeciesSearch('dragoturkey')).toBe('')
+  })
+
+  test('the other two produce a ?-prefixed search', () => {
+    expect(buildSpeciesSearch('seemyool')).toBe('?species=seemyool')
+    expect(buildSpeciesSearch('rhineetle')).toBe('?species=rhineetle')
+  })
+
+  test('what it builds is what decodeSpecies reads back', () => {
+    for (const species of ['dragoturkey', 'seemyool', 'rhineetle'] as const) {
+      const search = buildSpeciesSearch(species)
+      expect(decodeSpecies(params(search.replace(/^\?/, '')))).toBe(species)
+    }
+  })
+})
+
+describe('planSpecies', () => {
+  test('defaults when neither a target nor the parameter says otherwise', () => {
+    expect(planSpecies(DEFAULT_PLAN_URL_STATE)).toBe('dragoturkey')
+  })
+
+  test('the parameter decides when there is no target', () => {
+    expect(planSpecies({ ...DEFAULT_PLAN_URL_STATE, species: 'rhineetle' })).toBe('rhineetle')
+  })
+
+  test('a valid target outranks a contradictory parameter', () => {
+    expect(
+      planSpecies({
+        ...DEFAULT_PLAN_URL_STATE,
+        targetId: 'seemyool-almond',
+        species: 'rhineetle',
+      }),
+    ).toBe('seemyool')
+  })
+
+  test('an unknown target leaves the parameter in charge', () => {
+    expect(
+      planSpecies({ ...DEFAULT_PLAN_URL_STATE, targetId: 'not-a-colour', species: 'seemyool' }),
+    ).toBe('seemyool')
+  })
+})
+
+describe('species in the plan URL', () => {
+  test('absent decodes to no species key, so phase 2 state is unchanged', () => {
+    expect(decodePlanUrl(params('target=indigo'))).toEqual({
+      ...DEFAULT_PLAN_URL_STATE,
+      targetId: 'indigo',
+    })
+    expect(decodePlanUrl(params('target=indigo'))).not.toHaveProperty('species')
+  })
+
+  test('an explicit default species is normalised away rather than stored', () => {
+    expect(decodePlanUrl(params('species=dragoturkey'))).toEqual(DEFAULT_PLAN_URL_STATE)
+  })
+
+  test('an invalid species is ignored, and the rest of the state survives it', () => {
+    const state = decodePlanUrl(params('species=unicorn&qty=4'))
+    expect(state.species).toBeUndefined()
+    expect(planSpecies(state)).toBe('dragoturkey')
+    expect(state.quantity).toBe(4)
+  })
+
+  test('a species without a target decodes and re-encodes', () => {
+    const state = decodePlanUrl(params('species=seemyool'))
+    expect(state).toEqual({ ...DEFAULT_PLAN_URL_STATE, species: 'seemyool' })
+    expect(encodePlanUrl(state).toString()).toBe('species=seemyool')
+  })
+
+  test('a target of another species overrides the parameter on the way in and out', () => {
+    const state = decodePlanUrl(params('species=rhineetle&target=seemyool-almond'))
+    expect(state.species).toBe('seemyool')
+    expect(encodePlanUrl(state).get('species')).toBe('seemyool')
+  })
+
+  test('the species is derived from the target even when the parameter is missing', () => {
+    expect(decodePlanUrl(params('target=rhineetle-golden')).species).toBe('rhineetle')
+  })
+
+  test('encoding leads with the species, so a shared link reads scope-first', () => {
+    expect(
+      encodePlanUrl({ ...DEFAULT_PLAN_URL_STATE, targetId: 'seemyool-almond', quantity: 2 }),
+    ).toEqual(params('species=seemyool&target=seemyool-almond&qty=2'))
+  })
+
+  test('the default species is still omitted from the query', () => {
+    expect(encodePlanUrl({ ...DEFAULT_PLAN_URL_STATE, species: 'dragoturkey' }).toString()).toBe('')
+  })
+
+  test('buildPlannerHash carries the species', () => {
+    expect(buildPlannerHash({ ...DEFAULT_PLAN_URL_STATE, species: 'rhineetle' })).toBe(
+      '#/planner?species=rhineetle',
+    )
+    expect(buildPlannerHash({ ...DEFAULT_PLAN_URL_STATE, targetId: 'seemyool-turquoise' })).toBe(
+      '#/planner?species=seemyool&target=seemyool-turquoise',
+    )
+  })
+
+  const speciesCases: PlanUrlState[] = [
+    { ...DEFAULT_PLAN_URL_STATE, species: 'seemyool' },
+    { ...DEFAULT_PLAN_URL_STATE, species: 'rhineetle' },
+    { ...DEFAULT_PLAN_URL_STATE, targetId: 'seemyool-almond', species: 'seemyool' },
+    {
+      targetId: 'rhineetle-golden',
+      quantity: 12,
+      settings: { parentLevel: 150, optimakina: false, almanaxTakeza: true, cloning: false },
+      species: 'rhineetle',
+    },
+  ]
+
+  for (const state of speciesCases) {
+    test(`survives encode → decode: ${JSON.stringify(state)}`, () => {
+      expect(decodePlanUrl(encodePlanUrl(state))).toEqual(state)
+    })
+  }
 })

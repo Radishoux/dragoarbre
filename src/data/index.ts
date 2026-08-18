@@ -23,7 +23,6 @@ export {
   SEEMYOOL,
 } from './speciesInfo'
 export type * from './types'
-export { WILD_CAPTURE_INFO } from './wildCapture'
 export { DRAGOTURKEY_COLORS, DRAGOTURKEY_SPECIALS, RHINEETLE_COLORS, SEEMYOOL_COLORS }
 
 /** Every colour of every species, ascending by species tab order then generation. */

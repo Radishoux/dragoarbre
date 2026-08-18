@@ -12,8 +12,14 @@
  * break an inbound link.
  *
  * ```text
- * #/planner?target=<colorId>&qty=<int>&level=<int>&opti=<0|1>&takeza=<0|1>&clone=<0|1>
+ * #/planner?species=<id>&target=<colorId>&qty=<int>&level=<int>&opti=<0|1>&takeza=<0|1>&clone=<0|1>
  * ```
+ *
+ * Phase 3 added `species` — and only `species`. The six phase 2 names above are
+ * already live in shared links, so the new one is optional with a default and
+ * is omitted from the query whenever it *is* the default. A phase 2 link
+ * therefore still decodes to byte-identical state, which is what lets the whole
+ * phase 2 test suite stand unchanged.
  */
 
 import {
@@ -22,7 +28,7 @@ import {
   PARENT_LEVEL_MIN,
   type PlannerSettings,
 } from '../core/planner'
-import { getColorById } from '../data'
+import { ALL_SPECIES, getColorById, type SpeciesId } from '../data'
 
 /**
  * Query-parameter names carried in the planner's hash route.
@@ -30,6 +36,7 @@ import { getColorById } from '../data'
  * Frozen contract: external links are written against these exact strings.
  */
 export const PLAN_URL_PARAMS = {
+  species: 'species',
   target: 'target',
   quantity: 'qty',
   level: 'level',
@@ -37,6 +44,46 @@ export const PLAN_URL_PARAMS = {
   takeza: 'takeza',
   cloning: 'clone',
 } as const
+
+/**
+ * The species a URL carrying no `species` parameter scopes to.
+ *
+ * Dragoturkeys, because every link written before phase 3 meant them and none
+ * of those links carry the parameter.
+ */
+export const DEFAULT_SPECIES: SpeciesId = 'dragoturkey'
+
+const SPECIES_IDS: ReadonlySet<string> = new Set(ALL_SPECIES.map((species) => species.id))
+
+/**
+ * Reads the `species` parameter on its own.
+ *
+ * Used by every screen, not just the planner: the tree carries its selected
+ * species in the same parameter so one vocabulary covers the whole app.
+ * An absent, empty or unknown value falls back to {@link DEFAULT_SPECIES}
+ * rather than erroring — a hand-edited link is user input.
+ *
+ * @example
+ * decodeSpecies(new URLSearchParams('species=seemyool')) // 'seemyool'
+ * decodeSpecies(new URLSearchParams('species=unicorn')) // 'dragoturkey'
+ */
+export function decodeSpecies(params: URLSearchParams): SpeciesId {
+  const raw = params.get(PLAN_URL_PARAMS.species)
+  return raw && SPECIES_IDS.has(raw) ? (raw as SpeciesId) : DEFAULT_SPECIES
+}
+
+/**
+ * The search string that scopes a link to one species, `?`-prefixed and ready
+ * for `<Link to={{ pathname, search }}>`. Empty for the default species, so
+ * the Dragoturkey tab keeps producing the bare `#/` and `#/planner` URLs.
+ *
+ * @example
+ * buildSpeciesSearch('rhineetle') // '?species=rhineetle'
+ * buildSpeciesSearch('dragoturkey') // ''
+ */
+export function buildSpeciesSearch(species: SpeciesId): string {
+  return species === DEFAULT_SPECIES ? '' : `?${PLAN_URL_PARAMS.species}=${species}`
+}
 
 /** Inclusive bounds for the planner's quantity input. */
 export const QUANTITY_MIN = 1
@@ -57,6 +104,15 @@ export interface PlanUrlState {
   quantity: number
   /** Plan-wide breeding assumptions; always within the level bounds. */
   settings: PlannerSettings
+  /**
+   * Which species the planner is scoped to.
+   *
+   * Optional, and *absent* rather than `'dragoturkey'` when it is the default:
+   * that is what keeps a decoded phase 2 state deep-equal to the object phase 2
+   * produced. Read it through {@link planSpecies}, never raw, so the default is
+   * applied in exactly one place.
+   */
+  species?: SpeciesId
 }
 
 /** What a planner URL carrying no parameters at all decodes to. */
@@ -64,6 +120,23 @@ export const DEFAULT_PLAN_URL_STATE: PlanUrlState = {
   targetId: null,
   quantity: QUANTITY_MIN,
   settings: DEFAULT_PLANNER_SETTINGS,
+}
+
+/**
+ * The species a plan is actually scoped to.
+ *
+ * A valid target outranks the parameter: a plan for `seemyool-almond` is a
+ * Seemyool plan whatever `?species=` claims, and letting the two disagree would
+ * put the header on one species while the planner works on another. With no
+ * target, the parameter decides; with neither, {@link DEFAULT_SPECIES} does.
+ *
+ * @example
+ * planSpecies({ targetId: 'seemyool-almond', quantity: 1, settings, species: 'rhineetle' })
+ * // 'seemyool' — the target wins
+ */
+export function planSpecies(state: PlanUrlState): SpeciesId {
+  const target = state.targetId ? getColorById(state.targetId) : undefined
+  return target?.species ?? state.species ?? DEFAULT_SPECIES
 }
 
 /** The planner's route path, without the leading `#` of the hash router. */
@@ -114,12 +187,22 @@ function readFlag(params: URLSearchParams, name: string, fallback: boolean): boo
  * @example
  * // Out-of-range values clamp instead of throwing.
  * decodePlanUrl(new URLSearchParams('level=9999')).settings.parentLevel // 200
+ * @example
+ * // The species key is present only when it is not the default.
+ * decodePlanUrl(new URLSearchParams('species=seemyool')).species // 'seemyool'
+ * decodePlanUrl(new URLSearchParams('species=dragoturkey')).species // undefined
  */
 export function decodePlanUrl(params: URLSearchParams): PlanUrlState {
   const rawTarget = params.get(PLAN_URL_PARAMS.target)
   const targetId = rawTarget && getColorById(rawTarget) ? rawTarget : null
+  // Resolved rather than copied through, so `?species=rhineetle&target=indigo`
+  // decodes to the one species that is actually consistent with the plan.
+  const species = getColorById(targetId ?? '')?.species ?? decodeSpecies(params)
 
   return {
+    // Spread-omitted rather than set to `undefined`: the default species leaves
+    // no trace in the decoded object at all, exactly as it leaves none in the URL.
+    ...(species === DEFAULT_SPECIES ? {} : { species }),
     targetId,
     quantity: readInt(
       params,
@@ -158,9 +241,21 @@ export function decodePlanUrl(params: URLSearchParams): PlanUrlState {
  * @example
  * encodePlanUrl({ targetId: 'indigo', quantity: 1, settings: DEFAULT_PLANNER_SETTINGS })
  *   .toString() // 'target=indigo'
+ * @example
+ * // A non-default species leads, so a shared link says what it is about.
+ * encodePlanUrl({ ...DEFAULT_PLAN_URL_STATE, targetId: 'seemyool-almond' })
+ *   .toString() // 'species=seemyool&target=seemyool-almond'
  */
 export function encodePlanUrl(state: PlanUrlState): URLSearchParams {
   const params = new URLSearchParams()
+
+  // First, so the parameter that scopes everything else reads first in the
+  // link. Written even when the target already implies it: `BRIEF-phase-3.md`
+  // section 8 asks shared plan URLs to carry the species explicitly.
+  const species = planSpecies(state)
+  if (species !== DEFAULT_SPECIES) {
+    params.set(PLAN_URL_PARAMS.species, species)
+  }
 
   if (state.targetId && getColorById(state.targetId)) {
     params.set(PLAN_URL_PARAMS.target, state.targetId)

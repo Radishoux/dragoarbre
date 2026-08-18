@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "Dragoarbre",
-    "tagline": "An interactive Dofus mount-breeding tree"
+    "name": "Dragoarbre"
   },
   "nav": {
     "tree": "Breeding tree",
@@ -10,15 +9,18 @@
   },
   "species": {
     "dragoturkey": "Dragoturkeys",
-    "dragoturkeySingular": "Dragoturkey",
     "seemyool": "Seemyools",
     "rhineetle": "Rhineetles",
-    "comingSoon": "Coming soon"
+    "tabsLabel": "Species",
+    "commonBonusLabel": "Species bonus",
+    "commonBonus": "Every {{species}} carries +{{bonus}}.",
+    "commonBonusFromLevel": "Every {{species}} carries +{{bonus}}, from level {{level}}.",
+    "commonBonusNote": "Granted on top of the colour bonuses below.",
+    "emptyTitle": "No data yet",
+    "emptyBody": "Dragoarbre has no colour data for this species yet."
   },
   "language": {
-    "label": "Language",
-    "fr": "Français",
-    "en": "English"
+    "label": "Language"
   },
   "tree": {
     "title": "Dragoturkey breeding tree",
@@ -43,22 +45,28 @@
     },
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
-    "resetView": "Reset view"
+    "resetView": "Reset view",
+    "recipesReveal": "Show all {{count}} recipes",
+    "recipesHide": "Show cheapest only"
   },
   "detail": {
-    "title": "Details",
     "generation": "Generation {{gen}}",
     "kindMono": "Mono-color",
     "kindBicolor": "Bicolor",
     "bonuses": "Bonuses",
     "obtain": "How to obtain",
     "wildCaptureLabel": "Wild capture",
-    "crossLabel": "Cross",
     "crossWith": "{{parentA}} + {{parentB}}",
     "produces": "Can produce",
     "noProduces": "This color has not been bred into anything further yet.",
     "selectPrompt": "Select a color in the tree to see its details.",
-    "close": "Close"
+    "close": "Close",
+    "recipesLabel": "{{count}} recipes",
+    "recipesLabel_one": "{{count}} recipe",
+    "recipesLabel_other": "{{count}} recipes",
+    "recipeCheapest": "Cheapest",
+    "recipeCost": "{{cost}} captures / mount",
+    "recipeCostHint": "Expected wild captures per mount bred through this recipe, at the planner defaults."
   },
   "stats": {
     "vitality": "Vitality",

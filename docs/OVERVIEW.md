@@ -141,10 +141,15 @@ both new players and as a technical reference for phase 2.
 
 ### Header
 
-App name, main nav (tree, planner, how-it-works), the species tabs
-(Dragoturkeys active; Seemyools and Rhineetles visible but disabled,
-"coming soon"), and the FR/EN language switcher (persisted in
+App name, main nav (tree, planner, how-it-works), the three species tabs —
+all live since phase 3 — and the FR/EN language switcher (persisted in
 `localStorage`, seeded from the browser's language on first visit).
+
+The selected species is a URL concern, not component state: it rides in the
+same `?species=` parameter the planner uses, so a pasted link restores the tab
+and the tabs, the tree and the planner cannot disagree. Switching species
+deliberately drops the rest of the query — a target colour belongs to exactly
+one species, so carrying it across would build a plan the new tab cannot show.
 
 ## Breeding mechanics, briefly
 
@@ -152,10 +157,14 @@ A mating's baby has a **base 30% chance** of being the "target
 generation" — the highest generation reachable from the two parents'
 colors — **plus 0.15% per mount level summed across both parents**, plus a
 flat **+10%** if an Optimakina consumable is used, capped at 100% (with a
-once-a-year +20% Almanax bonus on top of that cap logic). For Dragoturkeys
-specifically, reaching the target generation means only one color is
-possible (since every color has exactly one recipe) — no further split
-needed. This exact formula is implemented and tested in
+once-a-year +20% Almanax bonus on top of that cap logic). For Dragoturkeys,
+reaching the target generation means only one colour is possible, since every
+colour has exactly one recipe — no further split needed. The two later species
+have up to 12 recipes for a single colour, so phase 3 generalised this: if one
+parent pair could produce `k` different colours of the target generation, the
+pool splits and the effective chance is `p / k`. In the data as transcribed
+`k` is 1 everywhere, and a test asserts it stays that way. This exact formula
+is implemented and tested in
 `src/core/breeding.ts`, and the planner is built entirely on top of it;
 see `docs/ARCHITECTURE.md` for how it's wired up and `docs/DECISIONS.md`
 for why only this part — not the residual distribution across non-target
@@ -171,9 +180,31 @@ colors — is modeled as exact math.
   needed no new game data — only `src/core/planner.ts` on top of the
   existing data and math layers, plus the `/planner` screen described
   above. Genetokens (a stretch goal in the brief) shipped with it.
-- **Phase 3 (next) — Seemyools and Rhineetles:** the two other mount
-  species. They breed differently from Dragoturkeys, so this is not purely
-  a data drop: the tree and especially the planner (which currently leans
-  on "one recipe per color") will both need revisiting. Their data is not
-  in this repo yet and must never be fabricated to fill the disabled tabs
-  — see `docs/DATA.md`'s checklist for adding a species.
+- **Phase 3 — Seemyools and Rhineetles (done):** the two other mount
+  species, taking the app from 66 colours to **306**. Not a data drop: they
+  breed differently, and the planner's "one recipe per colour" assumption had
+  to go. A colour can now have up to 12 recipes, so the planner ranks them by
+  the total wild captures their full plan costs and breeds through the
+  cheapest; the tree draws that recipe's edges by default with a per-node
+  toggle to reveal the rest, and the detail panel lists every recipe with its
+  price. The target-generation split rule was generalised at the same time.
+  Each new species is declared as its 15 monocolors, with the other 105
+  derived — see `docs/DATA.md`.
+
+### Ideas, not commitments
+
+Nothing below is planned or promised; they are the directions that looked
+worth noting while phase 3 was being built.
+
+- **Per-generation level overrides in the planner.** One parent level currently
+  applies to every mating. Real lines are levelled unevenly, and early
+  generations are often left low.
+- **A Monte Carlo confidence mode.** Every count the planner reports is an
+  expectation. Sampling the plan would turn "3.6 captures" into "you want 5 to
+  be 90% sure", which is closer to the question a player is actually asking —
+  the `safe` column is a crude stand-in for it today.
+- **Time, not just counts.** The gauge and paddock mechanics are documented
+  well enough to estimate how long a plan takes in real hours, which is the
+  obvious next question after "how many".
+- **Capture nets and the Reproducer capacity**, both of which change the
+  arithmetic materially and neither of which the planner models.

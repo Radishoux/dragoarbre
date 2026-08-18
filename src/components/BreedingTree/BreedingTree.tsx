@@ -15,6 +15,32 @@ interface BreedingTreeProps {
   nameFor: (color: MountColor) => string
   /** Phase 2, optional: colour id -> short badge text (e.g. "2.5"). Ids absent render no badge. */
   badges?: ReadonlyMap<string, string>
+  /**
+   * Phase 3, optional: which parents to draw edges from for a colour.
+   *
+   * Defaults to every parent across every recipe. That was right while each
+   * colour had exactly one recipe, but a Rhineetle with 12 of them would draw
+   * an edge to sixteen parents at once, so callers narrow it — the tree page
+   * to the cheapest recipe, the planner to the pair the plan actually mates.
+   *
+   * Memoize it: it is a dependency of the edge computation.
+   */
+  parentsFor?: (color: MountColor) => readonly string[]
+  /**
+   * Phase 3, optional: the colour whose every recipe is currently revealed.
+   * The toggle that sets it is drawn on the selected node only, so this is
+   * normally either `null` or the selected id.
+   */
+  revealedId?: string | null
+  /** Toggles {@link revealedId}. Absent leaves the reveal control unrendered. */
+  onToggleReveal?: (id: string) => void
+}
+
+/** Every distinct parent across all of a colour's recipes — the phase 1 default. */
+function allParents(color: MountColor): readonly string[] {
+  // A parent shared by two recipes of the same child would otherwise draw the
+  // identical line twice, and duplicate React keys with it.
+  return [...new Set((color.crosses ?? []).flat())]
 }
 
 /**
@@ -30,6 +56,9 @@ export function BreedingTree({
   getNodeState,
   nameFor,
   badges,
+  parentsFor = allParents,
+  revealedId = null,
+  onToggleReveal,
 }: BreedingTreeProps) {
   const { t } = useTranslation()
   const layout = useMemo(() => computeTreeLayout(colors), [colors])
@@ -61,10 +90,7 @@ export function BreedingTree({
       if (!color.crosses) continue
       const childPos = layout.positions.get(color.id)
       if (!childPos) continue
-      // Union across recipes: a parent shared by two recipes of the same
-      // child would otherwise draw the identical line twice, and duplicate
-      // React keys with it.
-      for (const parentId of new Set(color.crosses.flat())) {
+      for (const parentId of parentsFor(color)) {
         const parentPos = layout.positions.get(parentId)
         if (!parentPos) continue
         lines.push({
@@ -77,7 +103,7 @@ export function BreedingTree({
       }
     }
     return lines
-  }, [colors, layout])
+  }, [colors, layout, parentsFor])
 
   return (
     <div
@@ -126,6 +152,9 @@ export function BreedingTree({
                 state={getNodeState(color.id)}
                 onSelect={onSelect}
                 badge={badges?.get(color.id)}
+                recipeCount={color.crosses?.length}
+                revealed={color.id === revealedId}
+                onToggleReveal={onToggleReveal}
               />
             )
           })}

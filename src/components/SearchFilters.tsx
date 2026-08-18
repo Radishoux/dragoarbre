@@ -2,20 +2,6 @@ import { useTranslation } from 'react-i18next'
 import type { StatId } from '../data'
 
 const GENERATIONS = Array.from({ length: 10 }, (_, i) => i + 1)
-const STATS: StatId[] = [
-  'vitality',
-  'initiative',
-  'summons',
-  'heals',
-  'agility',
-  'chance',
-  'strength',
-  'intelligence',
-  'power',
-  'prospecting',
-  'critical',
-  'range',
-]
 
 interface SearchFiltersProps {
   query: string
@@ -24,6 +10,15 @@ interface SearchFiltersProps {
   onGenerationChange: (value: number | null) => void
   stat: StatId | null
   onStatChange: (value: StatId | null) => void
+  /**
+   * The stats offerable in the filter, in display order.
+   *
+   * Passed in rather than hardcoded because the three species carry different
+   * stats: the phase 1 list was the Dragoturkey dozen, which offered no way to
+   * filter a Seemyool by Earth Resistance and offered Vitality, which no
+   * colour carries — it is the species-wide bonus, not a colour's.
+   */
+  stats: readonly StatId[]
 }
 
 export function SearchFilters({
@@ -33,6 +28,7 @@ export function SearchFilters({
   onGenerationChange,
   stat,
   onStatChange,
+  stats,
 }: SearchFiltersProps) {
   const { t } = useTranslation()
   const hasActiveFilters = query !== '' || generation !== null || stat !== null
@@ -68,7 +64,7 @@ export function SearchFilters({
         aria-label={t('tree.filters.stat')}
       >
         <option value="">{t('tree.filters.allStats')}</option>
-        {STATS.map((statId) => (
+        {stats.map((statId) => (
           <option key={statId} value={statId}>
             {t(`stats.${statId}`)}
           </option>

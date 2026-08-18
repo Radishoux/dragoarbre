@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "Dragoarbre",
-    "tagline": "Un arbre de reproduction de montures Dofus, interactif"
+    "name": "Dragoarbre"
   },
   "nav": {
     "tree": "Arbre de reproduction",
@@ -10,15 +9,18 @@
   },
   "species": {
     "dragoturkey": "Dragodindes",
-    "dragoturkeySingular": "Dragodinde",
     "seemyool": "Muldos",
     "rhineetle": "Volkornes",
-    "comingSoon": "Bientôt disponible"
+    "tabsLabel": "Espèce",
+    "commonBonusLabel": "Bonus d'espèce",
+    "commonBonus": "Chaque {{species}} possède +{{bonus}}.",
+    "commonBonusFromLevel": "Chaque {{species}} possède +{{bonus}}, à partir du niveau {{level}}.",
+    "commonBonusNote": "Accordé en plus des bonus de couleur ci-dessous.",
+    "emptyTitle": "Pas encore de données",
+    "emptyBody": "Dragoarbre n'a pas encore de données de couleur pour cette espèce."
   },
   "language": {
-    "label": "Langue",
-    "fr": "Français",
-    "en": "English"
+    "label": "Langue"
   },
   "tree": {
     "title": "Arbre de reproduction des Dragodindes",
@@ -43,22 +45,28 @@
     },
     "zoomIn": "Zoomer",
     "zoomOut": "Dézoomer",
-    "resetView": "Réinitialiser la vue"
+    "resetView": "Réinitialiser la vue",
+    "recipesReveal": "Voir les {{count}} recettes",
+    "recipesHide": "Voir la moins chère"
   },
   "detail": {
-    "title": "Détails",
     "generation": "Génération {{gen}}",
     "kindMono": "Monocolore",
     "kindBicolor": "Bicolore",
     "bonuses": "Bonus",
     "obtain": "Comment l'obtenir",
     "wildCaptureLabel": "Capture sauvage",
-    "crossLabel": "Croisement",
     "crossWith": "{{parentA}} + {{parentB}}",
     "produces": "Peut donner",
     "noProduces": "Cette couleur n'a pas encore été croisée plus loin.",
     "selectPrompt": "Sélectionnez une couleur dans l'arbre pour voir ses détails.",
-    "close": "Fermer"
+    "close": "Fermer",
+    "recipesLabel": "{{count}} recettes",
+    "recipesLabel_one": "{{count}} recette",
+    "recipesLabel_other": "{{count}} recettes",
+    "recipeCheapest": "La moins chère",
+    "recipeCost": "{{cost}} captures / monture",
+    "recipeCostHint": "Captures sauvages attendues par monture obtenue via cette recette, avec les réglages par défaut du planificateur."
   },
   "stats": {
     "vitality": "Vitalité",

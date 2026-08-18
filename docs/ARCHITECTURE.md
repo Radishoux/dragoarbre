@@ -11,15 +11,18 @@ dragoarbre/
 ├── src/
 │   ├── data/            # Typed game data + derived indices (see docs/DATA.md)
 │   │   ├── types.ts         # MountColor, Bonus, SpecialMount, StatId, SpeciesId
-│   │   ├── colors.ts         # The 66 Dragoturkey colors (raw data)
+│   │   ├── colors.ts         # The 66 Dragoturkey colors (raw data, fully enumerated)
+│   │   ├── seemyools.ts      # 15 Seemyool monocolors; 105 bicolors derived
+│   │   ├── rhineetles.ts     # 15 Rhineetle monocolors; 105 bicolors derived
+│   │   ├── species.ts        # buildSpecies() derivation + colorId() rule (not data)
+│   │   ├── speciesInfo.ts    # Per-species word, common bonus, wild-capture text
 │   │   ├── specials.ts       # 2 special Dragoturkeys (raw data)
-│   │   ├── wildCapture.ts    # Bilingual wild-capture info
-│   │   ├── colors.test.ts    # Data integrity tests
+│   │   ├── *.test.ts         # Data integrity tests, one per dataset
 │   │   └── index.ts          # Public API: re-exports + derived reverse index / lineage
 │   ├── core/
 │   │   ├── breeding.ts        # Pure breeding-probability math (documented constants + functions)
 │   │   ├── breeding.test.ts
-│   │   ├── planner.ts         # Pure shopping-list planner: matings, mounts and captures per color
+│   │   ├── planner.ts         # Pure planner: recipe ranking, split rule, matings/mounts/captures
 │   │   └── planner.test.ts
 │   ├── i18n/
 │   │   ├── index.ts           # i18next init (FR/EN, browser detection, localStorage persistence)
@@ -50,7 +53,10 @@ dragoarbre/
 │   └── index.css                # Tailwind import + dark-fantasy theme tokens
 ├── docs/                 # This documentation set
 ├── .github/workflows/deploy.yml
-├── BRIEF-phase-1.md       # Source brief for all phase 1 game data
+├── BRIEF-phase-1.md       # Source brief for phase 1 game data (Dragoturkeys)
+├── BRIEF-phase-3.md       # Source brief for phase 3 game data (Seemyools, Rhineetles)
+├── ORCHESTRATION.md       # Multi-agent protocol used to run phase 3
+├── TASKS.md               # Phase task board
 └── CLAUDE.md              # Commands, data location, roadmap, maintenance rules
 ```
 
@@ -58,7 +64,7 @@ dragoarbre/
 
 ```mermaid
 graph LR
-  data["src/data<br/>(types, colors, specials, index)"]
+  data["src/data<br/>(types, colors, seemyools, rhineetles,<br/>species, speciesInfo, specials, index)"]
   breeding["src/core/breeding.ts"]
   planner["src/core/planner.ts"]
   utils["src/utils<br/>(names, search, planUrl)"]
@@ -74,6 +80,7 @@ graph LR
   planner --> breeding
   planner --> data
   components --> data
+  components --> planner
   components --> hooks
   components --> i18n
   pages --> data
@@ -87,48 +94,74 @@ graph LR
 
 Phase 2 connected the edge phase 1 had drawn as a dotted "future": the
 planner is `breeding.ts`'s first real consumer, and `PlannerPage` is the
-planner's. `src/core` stays React-free in both directions — it imports
-game data and nothing else, and nothing in `core` knows that a UI exists.
+planner's. Phase 3 added `components --> planner`: once a colour can have
+several recipes, the tree has to ask the planner which one is cheapest before
+it can draw an edge, and the detail panel lists the ranking. `src/core` stays
+React-free in both directions — it imports game data and nothing else, and
+nothing in `core` knows that a UI exists.
 
 ## Data model and invariants
 
-See `docs/DATA.md` for the full field reference. The invariants enforced by
-`src/data/colors.test.ts` (and checked structurally, not just spot-checked):
+See `docs/DATA.md` for the full field reference. **306 colours across three
+species**: 66 Dragoturkeys, 120 Seemyools, 120 Rhineetles. The invariants are
+enforced by `src/data/colors.test.ts`, `seemyools.test.ts`,
+`rhineetles.test.ts` and `species.test.ts`, checked structurally rather than
+spot-checked:
 
-- Exactly 66 colors total, with the exact per-generation counts
-  3/3/2/7/2/11/2/15/2/19 for generations 1-10.
-- All ids unique.
-- Every `cross` tuple references ids that exist and are of strictly lower
-  generation than the color itself (guarantees the DAG has no cycles and
-  every color ultimately traces to generation 1).
-- Generation-1 colors have `wildCapture: true` and no `cross`; every other
-  color has a `cross` of exactly two parent ids and no `wildCapture`.
+- Exact per-generation counts. Dragoturkeys 3/3/2/7/2/11/2/15/2/19 for
+  generations 1-10; each new species 15 monocolors plus the 105 bicolors
+  derived from them.
+- All ids unique across all three species — which is why the two new species
+  prefix theirs (all three have an "Amande").
+- Every recipe in `crosses` references ids that exist and are of strictly
+  lower generation than the colour itself. This guarantees the DAG is acyclic
+  and every colour traces back to generation 1, and it is what licenses both
+  the planner's descending sweep and the ranking's ascending one.
+- Generation-1 colours have `wildCapture: true` and no `crosses`; every other
+  colour has at least one recipe of exactly two parent ids and no
+  `wildCapture`. A Dragoturkey always has exactly one recipe; a Seemyool or
+  Rhineetle monocolor can have up to 12.
 - `kind` matches generation parity (`mono` for odd, `bicolor` for even).
+- Exact recipe counts per odd-generation monocolor: Seemyool
+  6/3/8/8/4/8/5/5/5/5, Rhineetle 3/3/3/3/12/12/8/2/2/2/2.
 
 The reverse "children of" index and lineage walks in `src/data/index.ts`
 are derived, not stored — see that file's docstrings for the exact
-algorithms (a `Map` built once from `cross`, and an iterative stack-based
+algorithms (a `Map` built once from `crosses`, and an iterative stack-based
 walk for ancestry).
 
 ## Data flow: data files → rendered tree
 
 ```mermaid
 graph TD
-  colorsTs["colors.ts<br/>(66 MountColor entries)"] --> dataIndex["data/index.ts<br/>derives: COLORS_BY_ID, CHILDREN_BY_ID"]
-  dataIndex --> treePage["TreePage.tsx<br/>(selection + search/filter state)"]
+  colorsTs["colors.ts · seemyools.ts · rhineetles.ts<br/>(306 MountColor entries)"] --> dataIndex["data/index.ts<br/>derives: COLORS_BY_ID, CHILDREN_BY_ID<br/>getColorsBySpecies()"]
+  url["?species= in the URL<br/>utils/planUrl.ts"] --> treePage
+  dataIndex --> treePage["TreePage.tsx<br/>(selection + reveal + search/filter state)"]
+  treePage --> rank["core/planner.ts<br/>rankAllRecipes(DEFAULT_SETTINGS, colors)"]
+  rank --> parentsFor["parentsFor(color)<br/>cheapest recipe, or all when revealed"]
+  rank --> lineage["cheapestLineageIds(selected)"]
   treePage --> layout["BreedingTree/layout.ts<br/>computeTreeLayout()"]
-  treePage --> nodeState["getNodeState(id)<br/>selected / lineage / dimmed / idle"]
+  lineage --> nodeState["getNodeState(id)<br/>selected / lineage / dimmed / idle"]
+  treePage --> nodeState
   layout --> svg["BreedingTree.tsx<br/>renders nodes + edges as SVG"]
   nodeState --> svg
-  treePage --> detailPanel["DetailPanel.tsx"]
+  parentsFor --> svg
+  treePage --> detailPanel["DetailPanel.tsx<br/>lists every recipe, cheapest first"]
+  rank --> detailPanel
   dataIndex --> detailPanel
 ```
+
+The tree is scoped to one species by the `?species=` query parameter, the same
+one the planner uses, so the header tabs, a pasted link and the rendered tree
+cannot disagree. `rankAllRecipes()` is called once per species at the planner's
+default settings: the tree has no assumption controls of its own, so it shows
+the recipe a default plan would breed.
 
 `getNodeState` combines two independent concerns into one visual state per
 node: (1) whether the node matches the active search/generation/stat
 filters, and (2) whether a node is selected and, if so, whether the
-current node is inside `getLineageIds(selectedId)`. A node dims if it
-fails either check; it's never removed from the DOM, so the tree's layout
+current node is inside `cheapestLineageIds(selectedId, rankings)`. A node
+dims if it fails either check; it's never removed from the DOM, so the tree's layout
 never shifts as filters or selection change.
 
 ## Tree layout and lineage highlighting
@@ -142,9 +175,22 @@ side effects, fully unit-testable (currently exercised indirectly through
 the data tests; a dedicated layout test can be added if the layout logic
 grows more complex).
 
-Lineage highlighting reuses `getAncestorIds()`/`getLineageIds()` from the
-data layer — the tree component itself does no graph traversal; it only
-asks "is this id in the lineage set" per node.
+Lineage highlighting asks `cheapestLineageIds()` from `src/core/planner.ts`,
+not the data layer's `getLineageIds()` — the tree component itself still does
+no graph traversal, it only asks "is this id in the lineage set" per node.
+The distinction matters once a colour has several recipes: the data-layer walk
+follows *every* recipe, which for a Rhineetle Plum reaches 28 colours, where
+the plan actually breeds 11. Highlighting the union would light up ancestors
+along paths nothing takes, and disagree with the edges drawn right next to
+them. `BRIEF-phase-3.md` section 9 asks for highlighting to follow the
+cheapest-recipe path, and this is that path.
+
+Edges follow the same rule. `BreedingTree` takes an optional
+`parentsFor(color)` prop; omitted, it draws every parent across every recipe
+(the phase 1 behaviour, and correct when each colour has one). `TreePage`
+passes the cheapest recipe's two parents instead, which takes the Rhineetle
+tree from 280 edges to 232, and passes all of them for the one node whose
+reveal toggle is on. `PlanTree` passes the pairs the plan actually mates.
 
 Pan/zoom (`usePanZoom.ts`) is a small hook wrapping an SVG `<g
 transform="translate(...) scale(...)">`: pointer-event drag for panning
@@ -201,18 +247,89 @@ that is randomly one of the two colors, returning on average 0.5 of each,
 so each mating nets **0.5** consumed per parent color instead of 1.
 `f = cloning ? 0.5 : 1`.
 
+### Multi-recipe colours: cheapest-recipe selection
+
+Phase 2 could assume one recipe per colour. Phase 3 cannot: 21 of the 306
+colours have several, up to 12 for a Rhineetle Emerald or Plum. So the planner
+has to *choose*, and `BRIEF-phase-3.md` section 8 defines the choice as the
+recipe minimising the total expected wild captures of the colour's full
+recursive plan — captures being the resource a player actually has to go and
+farm.
+
+`rankAllRecipes(settings, colors)` scores every recipe of every colour:
+
+```text
+cost(X) = 1                                    if X is wild-caught
+cost(X) = min over recipes (A, B) of
+            (k / p) * f * (cost(A) + cost(B))  otherwise
+```
+
+`k / p` matings per mount, each consuming `f` of both parents. It returns one
+`RecipeRanking` per colour: `options` cheapest-first, `chosen` = `options[0]`,
+and `alternatives` = the rest, which is what the detail panel lists.
+
+**Memoised as an ascending sweep, not a recursive walk with a cache.** Every
+recipe points at strictly lower generations, so one ascending pass reaches a
+colour only once both its parents are already scored — the mirror image of the
+descending sweep `computePlan()` uses, resting on the same data invariant. It
+is linear in the number of recipes whatever the fan-out.
+
+**The ranking depends on the settings**, which is not a wrinkle but the model
+being honest. The cost of a path of length `n` is proportional to `(f / p)^n`,
+so when `f / p < 1` (cloning on, high `p`) a *deeper* recipe scores cheaper,
+and when `f / p > 1` a shallower one does. At the extreme — `p = 1` with
+cloning on — `f / p` is exactly 0.5, every colour costs exactly 1.0 captures
+per mount, and *every* recipe ties. That is the same structural consequence of
+the amortised-cloning assumption already recorded under "monotonicity holds
+only without cloning", not a defect, and it is pinned by a test.
+
+Because ties are therefore common rather than rare, the tie-break has to be
+deterministic: lexicographic on the pair of parent ids compared as an *ordered*
+pair (so the order a recipe happens to be stored in cannot change the winner),
+then on the recipe's index. Costs are compared with a relative tolerance, since
+two structurally equivalent recipes can drift apart in the last bits of a float
+after a dozen multiplications and would otherwise order by that drift.
+
+`cheapestLineageIds(colorId, rankings)` walks the same chosen recipes to
+produce the colour set the plan will touch. A property test asserts it equals
+exactly `computePlan()`'s colour set, for all 306 colours under two settings
+profiles — if the tree's highlighting and the plan ever diverged, that test
+fails rather than the UI quietly lying.
+
+### The generic split rule
+
+If one exact parent pair appears in the recipe lists of `k` different colours
+of the **same target generation**, those colours compete for one
+target-generation probability pool, so the effective per-mating chance for the
+one you want is `p / k` and you need `k` times as many matings.
+
+In the transcribed data `k` is 1 everywhere — every pair maps to a single
+colour. The rule is still implemented generically, and
+`findRecipeCollisions(colors)` is what turns "there are no collisions" from an
+assumption into an assertion: `planner.test.ts` requires the list to be empty
+on the shipped data, so a future data correction cannot silently divide every
+probability in the plan. The `k > 1` branch is kept under test by a synthetic
+species whose two generation-3 monocolors share one parent pair.
+
+Note that `k` counts distinct *colours* competing at one generation, not recipe
+entries: a colour listing the same pair twice still counts once, and the same
+pair feeding two colours at *different* generations is not a collision, because
+they never compete for the same pool.
+
 ### The recursion
 
 The brief specifies the plan as a recursion over the color DAG:
 
 ```text
 plan(X, q):
-  if gen(X) === 1: captures[X] += q
+  if X has no recipe: captures[X] += q      // generation 1, caught in the wild
   else:
-    M = q / p                    // expected matings for q successes
-    matings[recipe(X)] += M
+    (A, B) = cheapest recipe of X           // see rankAllRecipes
+    k      = colours of gen(X) that this exact pair also produces
+    M      = q / (p / k)                    // expected matings for q successes
+    matings[(A, B)] += M
     f = cloning ? 0.5 : 1
-    for each parent P of X: plan(P, M * f)
+    plan(A, M * f); plan(B, M * f)
 ```
 
 Generation-1 colors terminate the recursion: they are caught in the wild,
@@ -226,8 +343,9 @@ descending generation order**, accumulating parent requirements into the
 same map as it goes.
 
 This is exactly equivalent to the recursion, and the reason is a data
-invariant, not a coincidence: every `cross` edge points to a strictly
-lower generation, enforced structurally by `src/data/colors.test.ts`. So
+invariant, not a coincidence: every `crosses` edge points to a strictly
+lower generation, enforced structurally by `src/data/colors.test.ts` and
+`src/data/species.test.ts`. So
 a descending pass reaches a color only after every color that could
 possibly consume it has already been visited and has already added its
 share to `needed`. Each color's total requirement is therefore final by
@@ -235,9 +353,14 @@ the time the sweep gets to it.
 
 The payoff is complexity. The literal recursion re-walks the same
 sub-trees once per distinct ancestry path, which is exponential in the
-number of paths — the deep generations of the Dragoturkey DAG have a lot
-of them. The sweep is linear in the number of colors (66), with one
-`Map` lookup per edge.
+number of paths — and the two new species, whose late generations fan out
+through up to 12 recipes each, have vastly more of them than Dragoturkeys do.
+The sweep is linear in the number of colours (306), with one `Map` lookup per
+edge.
+
+The recipe choice is made once for the whole colour set rather than once per
+plan node, which is what makes a single sweep enough: a colour is bred the same
+way wherever it appears, so its demand can be accumulated in one place.
 
 ```mermaid
 graph TD
@@ -248,14 +371,16 @@ graph TD
 
   p --> sweep
   f --> sweep
-  seed --> sweep["One pass over the 66 colors,<br/>DESCENDING by generation"]
+  input --> rank["rankAllRecipes(settings, colors)<br/>cheapest recipe per colour"]
+  rank --> sweep
+  seed --> sweep["One pass over the colour set,<br/>DESCENDING by generation"]
 
   sweep --> want{"needed[X] &gt; 0?"}
   want -- no --> skip["skip — X is not in<br/>the target's ancestry"]
-  want -- yes --> gen{"gen(X) = 1?"}
+  want -- yes --> gen{"X has no recipe?<br/>(exactly the generation-1 colours)"}
 
   gen -- yes --> capture["wild capture:<br/>keep needed[X], no matings"]
-  gen -- no --> mate["M = needed[X] / p<br/>record PlannedPair for recipe(X)"]
+  gen -- no --> mate["M = needed[X] / (p / k)<br/>record PlannedPair for the<br/>chosen recipe, with its alternatives"]
   mate --> spread["for each parent P of X:<br/>needed[P] += M * f"]
   spread --> sweep
 
@@ -314,10 +439,20 @@ Plan state lives in the query string of the hash route, decoded and
 encoded by `src/utils/planUrl.ts`:
 
 ```text
-#/planner?target=<colorId>&qty=<1-999>&level=<1-200>&opti=<0|1>&takeza=<0|1>&clone=<0|1>
+#/planner?species=<speciesId>&target=<colorId>&qty=<1-999>&level=<1-200>&opti=<0|1>&takeza=<0|1>&clone=<0|1>
 ```
 
-Every parameter is optional. Missing toggles and level fall back to
+Every parameter is optional. Phase 3 added `species`, and added it in the way
+the frozen-contract rule demands: it is *absent* rather than `dragoturkey`
+when it is the default, so every phase 2 link still decodes to exactly the
+state phase 2 produced, byte for byte. A valid `target` outranks it — a plan
+for `seemyool-almond` is a Seemyool plan whatever `?species=` claims, and
+letting the two disagree would put the header on one species while the planner
+worked on another. `planSpecies()` applies that precedence in one place so no
+screen can re-derive it differently.
+
+The tree carries the same `species` parameter, so one vocabulary scopes the
+whole app rather than each screen inventing its own. Missing toggles and level fall back to
 `DEFAULT_PLANNER_SETTINGS` (level 100, Optimakina on, Takeza off, cloning
 on), a missing quantity to 1, and a missing or unknown `target` to no
 selection — so a bare `#/planner` is valid and a partial or stale link
@@ -331,11 +466,16 @@ The point of all this is shareability: a plan is a URL you can bookmark,
 paste to a guildmate, or reload without losing.
 
 The plan tree reuses the phase 1 renderer rather than drawing a second
-graph — the same layout and node components, restricted to the target's
-ancestry (the lineage set `src/data/index.ts` already derives), with each
-node badged with how many of that color the plan needs. Phase 1's decision
-to keep `computeTreeLayout()` a pure function over an arbitrary color list
-is what makes this a restriction rather than a rewrite.
+graph — the same layout and node components, restricted to the plan's own
+colour set, with each node badged with how many of that colour the plan needs.
+Phase 1's decision to keep `computeTreeLayout()` a pure function over an
+arbitrary colour list is what makes this a restriction rather than a rewrite.
+
+It restricts to `plan.colors`, not to `getLineageIds(target)`. Those were the
+same list while every colour had one recipe; with several they are not, and the
+union walk would lay out 28 colours for a Rhineetle Plum whose plan breeds 11 —
+17 nodes with no badge and, since the plan mates no pair for them, no edges
+either.
 
 ## i18n setup
 
@@ -353,7 +493,17 @@ fields on `MountColor`/`Bonus`), since that's content, not UI chrome; see
 
 No global state library. Phase 1's only meaningfully shared state — the
 selected color id, the active search/filter values — lives in
-`TreePage.tsx`'s local `useState`, passed down as props. i18next holds its
+`TreePage.tsx`'s local `useState`, passed down as props. Phase 3 added the
+revealed-recipes node to that set.
+
+A pattern worth naming, because phase 3 used it three times: state that
+*depends* on the URL is **derived at render, never synchronised in an effect**.
+A selection from another species, a reveal belonging to a node that is no
+longer selected, and a stat filter the new species does not carry are all
+computed as `x === expected ? x : null` rather than cleared by a `useEffect`
+watching the species. Each avoids a frame where the old value is still live,
+and there is no synchronisation to get wrong — species changes and selection
+changes are handled by the same expression. i18next holds its
 own language state internally (read via `useTranslation()`). This is
 intentionally minimal: there's exactly one screen with interactive state,
 and prop-drilling two levels deep doesn't yet justify context or a store.

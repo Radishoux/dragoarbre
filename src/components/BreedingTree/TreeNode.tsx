@@ -16,6 +16,17 @@ const BADGE_PADDING_X = 12
 const BADGE_MIN_WIDTH = 22
 const BADGE_OVERHANG = 6
 
+/**
+ * Reveal-toggle pill geometry. It sits on the node's *bottom* edge, where the
+ * count badge (top edge) can never reach it — the two are mutually exclusive
+ * in practice (only the planner passes badges, only the tree page passes a
+ * reveal toggle) but the geometry does not rely on that.
+ */
+const REVEAL_HEIGHT = 16
+const REVEAL_FONT_SIZE = 10
+const REVEAL_CHAR_WIDTH = 6
+const REVEAL_PADDING_X = 14
+
 interface TreeNodeProps {
   color: MountColor
   label: string
@@ -25,6 +36,17 @@ interface TreeNodeProps {
   onSelect: (id: string) => void
   /** Phase 2, optional: short badge text (e.g. `"2.5"`). Absent renders no badge. */
   badge?: string
+  /**
+   * Phase 3, optional: how many recipes this colour has. A toggle to reveal
+   * them all is drawn only when this is above 1 *and* the node is selected —
+   * 21 colours have several recipes, and a permanently visible control on each
+   * of them would clutter a 120-node tree.
+   */
+  recipeCount?: number
+  /** Whether every recipe's edges are currently shown for this node. */
+  revealed?: boolean
+  /** Toggles {@link revealed}. Absent leaves the control unrendered. */
+  onToggleReveal?: (id: string) => void
 }
 
 /**
@@ -41,7 +63,18 @@ function parseBadgeCount(badge: string): number | null {
  * One colour node in the breeding tree SVG: swatch, truncated label, selection
  * / lineage styling, and — when the planner supplies one — a count badge.
  */
-export function TreeNode({ color, label, x, y, state, onSelect, badge }: TreeNodeProps) {
+export function TreeNode({
+  color,
+  label,
+  x,
+  y,
+  state,
+  onSelect,
+  badge,
+  recipeCount,
+  revealed = false,
+  onToggleReveal,
+}: TreeNodeProps) {
   const { t } = useTranslation()
   const swatch = getSwatch(color.id)
   const opacity = state === 'dimmed' ? 0.28 : 1
@@ -62,6 +95,12 @@ export function TreeNode({ color, label, x, y, state, onSelect, badge }: TreeNod
     ? Math.max(BADGE_MIN_WIDTH, badge.length * BADGE_CHAR_WIDTH + BADGE_PADDING_X)
     : 0
   const badgeX = NODE_WIDTH + BADGE_OVERHANG - badgeWidth
+
+  const showReveal = state === 'selected' && onToggleReveal !== undefined && (recipeCount ?? 0) > 1
+  const revealLabel = revealed
+    ? t('tree.recipesHide')
+    : t('tree.recipesReveal', { count: recipeCount ?? 0 })
+  const revealWidth = Math.max(44, revealLabel.length * REVEAL_CHAR_WIDTH + REVEAL_PADDING_X)
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: a real <button> isn't valid inside SVG <g>
@@ -130,6 +169,50 @@ export function TreeNode({ color, label, x, y, state, onSelect, badge }: TreeNod
             fill="var(--color-panel-raised)"
           >
             {badge}
+          </text>
+        </g>
+      )}
+      {showReveal && (
+        // biome-ignore lint/a11y/useSemanticElements: a real <button> isn't valid inside SVG <g>
+        <g
+          role="button"
+          tabIndex={0}
+          aria-pressed={revealed}
+          // The node itself is clickable, so the toggle has to stop the event
+          // reaching it — otherwise revealing recipes would re-select the node
+          // and, on a second click, look like it did nothing.
+          onClick={(event) => {
+            event.stopPropagation()
+            onToggleReveal?.(color.id)
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return
+            event.stopPropagation()
+            onToggleReveal?.(color.id)
+          }}
+          style={{ cursor: 'pointer' }}
+        >
+          <title>{revealLabel}</title>
+          <rect
+            x={(NODE_WIDTH - revealWidth) / 2}
+            y={NODE_HEIGHT - REVEAL_HEIGHT / 2}
+            width={revealWidth}
+            height={REVEAL_HEIGHT}
+            rx={REVEAL_HEIGHT / 2}
+            fill={revealed ? 'var(--color-accent)' : 'var(--color-panel)'}
+            stroke="var(--color-accent)"
+            strokeWidth={1.25}
+          />
+          <text
+            x={NODE_WIDTH / 2}
+            y={NODE_HEIGHT}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontSize={REVEAL_FONT_SIZE}
+            fontWeight={600}
+            fill={revealed ? 'var(--color-panel)' : 'var(--color-accent)'}
+          >
+            {revealLabel}
           </text>
         </g>
       )}

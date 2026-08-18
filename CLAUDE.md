@@ -1,8 +1,8 @@
 # CLAUDE.md — Dragoarbre
 
 Fan-made, bilingual (FR/EN) interactive breeding tree and planner for
-Dofus mounts. Static site, no backend, deployed to GitHub Pages. Phases 1
-and 2 cover Dragoturkeys only — see the roadmap below.
+Dofus mounts. Static site, no backend, deployed to GitHub Pages. All three
+species ship: 306 colours across Dragoturkeys, Seemyools and Rhineetles.
 
 ## Commands
 
@@ -31,11 +31,15 @@ each data file's header comment.
 
 - `breeding.ts` — the documented probability constants and
   `targetGenerationChance()` / `expectedMatingsForTargetGeneration()`.
-- `planner.ts` — the phase 2 engine. `computePlan(targetId, quantity,
-  settings)` returns a `BreedingPlan`: matings per recipe pair, mounts per
-  color (`expected` and `safe`), generation-1 wild captures, totals and a
-  genetokens estimate. Its TSDoc is the source of truth for the formulas;
-  read it before changing anything numeric.
+- `planner.ts` — the planner engine. `computePlan(targetId, quantity,
+  settings, colors?)` returns a `BreedingPlan`: matings per recipe pair,
+  mounts per colour (`expected` and `safe`), generation-1 wild captures,
+  totals and a genetokens estimate. `rankAllRecipes()` scores every recipe of
+  every colour by the wild captures its full plan costs and is what picks the
+  one `computePlan` breeds through; `findRecipeCollisions()` asserts the
+  target-split `k` is 1 across the shipped data; `cheapestLineageIds()` gives
+  the tree the ancestry the plan actually takes. Its TSDoc is the source of
+  truth for the formulas; read it before changing anything numeric.
 
 Nothing in `src/core/` may import from `components/`, `pages/` or `i18n/`.
 The planner UI (`src/pages/PlannerPage.tsx`, `src/components/Planner/`)
@@ -49,11 +53,18 @@ route's query string via `src/utils/planUrl.ts`, not in component state.
   plus the `/planner` screen. Pick a target color and get the expected
   matings, mounts and wild captures per generation, from
   `src/core/breeding.ts`'s probability math. Genetokens shipped with it.
-- **Phase 3 (next):** Seemyools and Rhineetles. See `docs/DATA.md`'s
-  "adding a new species" checklist before starting — their data must come
-  from a real source brief, not be stubbed. Note this is not a pure data
-  drop: they breed differently from Dragoturkeys, and the planner's
-  "one recipe per color" assumption will need revisiting.
+- **Phase 3 (done):** Seemyools and Rhineetles — 66 colours to 306. Not a
+  pure data drop: a colour can have up to 12 recipes, so the planner ranks
+  them and breeds through the cheapest, the target-split rule was generalised
+  to `p / k`, and the tree draws one recipe's edges with a per-node reveal.
+  Each new species is declared as its 15 monocolors and `buildSpecies()`
+  derives the other 105. See `docs/DATA.md` for the checklist before adding
+  a fourth.
+
+Ideas noted but **not** committed to: per-generation level overrides in the
+planner, a Monte Carlo confidence mode instead of bare expectations, wall-clock
+time estimates from the gauge mechanics, and modelling capture nets and the
+Reproducer capacity. See `docs/OVERVIEW.md`.
 
 ## Documentation maintenance rules
 
@@ -95,9 +106,10 @@ route's query string via `src/utils/planUrl.ts`, not in component state.
   store. Parameter names are a public contract — shared links break if
   they're renamed, so new options must be optional with a default.
 - `computePlan()` sweeps colors once in descending generation order
-  instead of recursing literally. This is only valid because every `cross`
+  instead of recursing literally. This is only valid because every `crosses`
   edge points to a strictly lower generation (enforced by
-  `src/data/colors.test.ts`) — relax that invariant and the sweep breaks.
+  `src/data/colors.test.ts` and `src/data/species.test.ts`) — relax that
+  invariant and both the sweep and the recipe ranking break.
 - One `parentLevel` is applied to both parents of every mating rather than
   modelling per-pair levels.
 - Genetokens (a brief stretch goal) were implemented.
@@ -105,3 +117,24 @@ route's query string via `src/utils/planUrl.ts`, not in component state.
 `docs/DECISIONS.md` carries the full reasoning, including an entry for
 each of the planner's four modelling assumptions (clean genealogy, failed
 births not salvaged, genders ignored, cloning amortised).
+
+## Judgment calls made during phase 3
+
+- **Cheapest-recipe selection is scored in wild captures**, not matings or
+  path length — captures are the only resource you leave the paddock for.
+  The ranking depends on the settings, and at `p = 1` with cloning on every
+  recipe ties exactly; the deterministic id tie-break is therefore
+  load-bearing, not a rare path.
+- **The split rule is implemented generically but `k` is 1 everywhere**, and a
+  test asserts it stays that way rather than assuming it.
+- **Lineage highlighting follows the cheapest path**, via
+  `cheapestLineageIds()`, not `getLineageIds()`'s union of every recipe. A
+  property test pins it to exactly `computePlan()`'s colour set.
+- **The species word comes from `speciesInfo.ts`**, not an i18n key: it is
+  per-species game data. `{ fr, en }` on a data record is content;
+  `translation.json` is UI chrome.
+- **URL-dependent UI state is derived at render, never synchronised in an
+  effect** — a stale selection, reveal or stat filter is dropped by a
+  `x === expected ? x : null` expression rather than cleared by a `useEffect`.
+
+`docs/DECISIONS.md` carries the full reasoning for each.

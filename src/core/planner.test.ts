@@ -1,12 +1,28 @@
 import { describe, expect, test } from 'bun:test'
-import { DRAGOTURKEY_COLORS, getColorById } from '../data'
+import {
+  ALL_COLORS,
+  buildSpecies,
+  DRAGOTURKEY_COLORS,
+  getColorById,
+  getLineageIds,
+  type MonoSpec,
+  type MountColor,
+  RHINEETLE_COLORS,
+  SEEMYOOL_COLORS,
+  type SpeciesInfo,
+} from '../data'
 import {
   type BreedingPlan,
+  cheapestLineageIds,
   computePlan,
   DEFAULT_PLANNER_SETTINGS,
+  findRecipeCollisions,
   type PlannerSettings,
   parentConsumptionFactor,
   planChance,
+  type RecipeChoice,
+  rankAllRecipes,
+  rankRecipes,
 } from './planner'
 
 /** A settings object with `cloning`/level overrides applied to the defaults. */
@@ -287,5 +303,391 @@ describe('computePlan — genetokens', () => {
     // Cloning off, so both gen-2 colours are needed once each: 4 + 2 + 2 = 8.
     const plan = computePlan('indigo', 1, settings({ ...GUARANTEED, cloning: false }))
     expect(plan?.genetokens).toBe(8)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Phase 3: multi-recipe colours, the p/k split rule and species scoping.
+// ---------------------------------------------------------------------------
+
+const synthetic = (stat: 'agility' | 'strength' | 'dodge' | 'chance' | 'lock', value: number) =>
+  ({ stat, value, unit: 'flat' }) as const
+
+const SYNTHETIC_INFO: SpeciesInfo = {
+  id: 'seemyool',
+  singular: { fr: 'Muldo', en: 'Seemyool' },
+  commonBonus: synthetic('agility', 1),
+  wildCapture: { fr: 'Bassin des Muldos', en: 'Seemyool Basin' },
+}
+
+const EBONY: MonoSpec = {
+  id: 'ebony',
+  generation: 1,
+  name: { fr: 'Ébène', en: 'Ebony' },
+  bonuses: [synthetic('agility', 90)],
+  component: [synthetic('agility', 70)],
+}
+
+const CRIMSON: MonoSpec = {
+  id: 'crimson',
+  generation: 1,
+  name: { fr: 'Pourpre', en: 'Crimson' },
+  bonuses: [synthetic('strength', 90)],
+  component: [synthetic('strength', 70)],
+}
+
+/** The recipe both colliding monos below are bred from: one bicolor, one mono. */
+const SHARED_RECIPE = [['ebony', 'crimson'], 'ebony'] as const
+
+/**
+ * A stand-in species whose two generation-3 monocolors are produced by the
+ * *same* parent pair — the `k = 2` case the split rule exists for.
+ *
+ * `BRIEF-phase-3.md` section 7 claims the real data has no such pair, and
+ * `findRecipeCollisions` proves it below. This fixture is how the `k > 1`
+ * branch stays tested anyway, so a future data correction that introduces a
+ * collision meets code that already handles it.
+ */
+const COLLIDING: MountColor[] = buildSpecies(SYNTHETIC_INFO, [
+  EBONY,
+  CRIMSON,
+  {
+    id: 'almond',
+    generation: 3,
+    name: { fr: 'Amande', en: 'Almond' },
+    bonuses: [synthetic('dodge', 50)],
+    component: [synthetic('dodge', 40)],
+    recipes: [SHARED_RECIPE],
+  },
+  {
+    id: 'indigo',
+    generation: 3,
+    name: { fr: 'Indigo', en: 'Indigo' },
+    bonuses: [synthetic('chance', 50)],
+    component: [synthetic('chance', 40)],
+    recipes: [SHARED_RECIPE],
+  },
+])
+
+/** The same shared pair, but with its two children at different generations. */
+const STAGGERED: MountColor[] = buildSpecies(SYNTHETIC_INFO, [
+  EBONY,
+  CRIMSON,
+  {
+    id: 'almond',
+    generation: 3,
+    name: { fr: 'Amande', en: 'Almond' },
+    bonuses: [synthetic('dodge', 50)],
+    component: [synthetic('dodge', 40)],
+    recipes: [SHARED_RECIPE],
+  },
+  {
+    id: 'ivory',
+    generation: 5,
+    name: { fr: 'Ivoire', en: 'Ivory' },
+    bonuses: [synthetic('lock', 50)],
+    component: [synthetic('lock', 40)],
+    recipes: [SHARED_RECIPE],
+  },
+])
+
+describe('findRecipeCollisions', () => {
+  test('the shipped data has none, which is what makes k = 1 everywhere', () => {
+    expect(findRecipeCollisions()).toEqual([])
+  })
+
+  test('defaults to all three species', () => {
+    expect(findRecipeCollisions()).toEqual(findRecipeCollisions(ALL_COLORS))
+  })
+
+  test('reports a pair producing two colours of the same generation', () => {
+    expect(findRecipeCollisions(COLLIDING)).toEqual([
+      {
+        parentAId: 'seemyool-crimson-ebony',
+        parentBId: 'seemyool-ebony',
+        generation: 3,
+        childIds: ['seemyool-almond', 'seemyool-indigo'],
+      },
+    ])
+  })
+
+  test('the same pair feeding two different generations is not a collision', () => {
+    // k counts colours competing for one target-generation pool. Two children
+    // at different generations never compete, so neither probability splits.
+    expect(findRecipeCollisions(STAGGERED)).toEqual([])
+  })
+})
+
+describe('rankAllRecipes', () => {
+  const rankings = rankAllRecipes(DEFAULT_PLANNER_SETTINGS)
+
+  test('scores every colour of all three species', () => {
+    expect(rankings.size).toBe(ALL_COLORS.length)
+    for (const color of ALL_COLORS) expect(rankings.has(color.id)).toBe(true)
+  })
+
+  test('options are cheapest-first, with chosen and alternatives derived from them', () => {
+    for (const ranking of rankings.values()) {
+      const costs = ranking.options.map((option: RecipeChoice) => option.captureCost)
+      expect([...costs].sort((a, b) => a - b)).toEqual(costs)
+      expect(ranking.chosen).toEqual(ranking.options[0] ?? null)
+      expect(ranking.alternatives).toEqual(ranking.options.slice(1))
+      expect(ranking.captureCost).toBeCloseTo(ranking.chosen?.captureCost ?? 1, 9)
+    }
+  })
+
+  test('a wild-caught colour has no recipe and costs exactly one capture', () => {
+    const almond = rankings.get('almond')
+    expect(almond?.options).toEqual([])
+    expect(almond?.chosen).toBeNull()
+    expect(almond?.captureCost).toBe(1)
+  })
+
+  test('the 12 recipeless colours are exactly the generation-1 ones', () => {
+    const wild = [...rankings.values()].filter((ranking) => ranking.chosen === null)
+    expect(wild.length).toBe(12)
+    for (const ranking of wild) {
+      expect(getColorById(ranking.colorId)?.generation).toBe(1)
+    }
+  })
+
+  test('every Dragoturkey colour still has one recipe and no alternatives', () => {
+    for (const color of DRAGOTURKEY_COLORS) {
+      const ranking = rankings.get(color.id)
+      expect(ranking?.options.length).toBe(color.generation === 1 ? 0 : 1)
+      expect(ranking?.alternatives).toEqual([])
+    }
+  })
+
+  test('a 12-recipe Rhineetle ranks its two cost tiers in order', () => {
+    const plum = rankings.get('rhineetle-plum')
+    expect(plum?.options.length).toBe(12)
+    const costs = plum?.options.map((option: RecipeChoice) => option.captureCost) ?? []
+    // Eight recipes reach Plum through the cheaper tier, four through the dearer.
+    expect(costs.filter((cost) => cost < 4).length).toBe(8)
+    expect(costs[0]).toBeCloseTo(3.633902541, 9)
+    expect(costs[11]).toBeCloseTo(4.164931279, 9)
+    expect(plum?.alternatives.length).toBe(11)
+  })
+
+  test('exact ties break on the ordered parent pair, not on storage order', () => {
+    // All six Seemyool Ginger recipes cost the same, so only the tie-break
+    // decides, and it picks index 1 which storage order never would.
+    const ginger = rankings.get('seemyool-ginger')
+    const costs = ginger?.options.map((option: RecipeChoice) => option.captureCost) ?? []
+    expect(new Set(costs).size).toBe(1)
+    expect(ginger?.chosen?.index).toBe(1)
+    expect(ginger?.chosen?.parentAId).toBe('seemyool-crimson-golden')
+    expect(ginger?.chosen?.parentBId).toBe('seemyool-ebony-golden')
+
+    const keys = (ginger?.options ?? []).map((option: RecipeChoice) =>
+      [option.parentAId, option.parentBId].sort().join('|'),
+    )
+    expect([...keys].sort()).toEqual(keys)
+  })
+
+  test('the ranking is deterministic across calls', () => {
+    expect(rankAllRecipes(DEFAULT_PLANNER_SETTINGS)).toEqual(rankings)
+  })
+
+  test('at p = 1 with cloning every colour costs exactly one capture', () => {
+    // f / p = 0.5 exactly offsets the two parents a mating consumes, so depth
+    // stops costing anything. Documented in rankAllRecipes and DECISIONS.md as
+    // a consequence of amortised cloning, not a bug, and pinned here so it
+    // cannot change silently.
+    const cheap = rankAllRecipes(settings({ ...GUARANTEED, cloning: true }))
+    for (const ranking of cheap.values()) expect(ranking.captureCost).toBe(1)
+  })
+
+  test('without cloning, depth costs more', () => {
+    const dear = rankAllRecipes(settings({ ...GUARANTEED, cloning: false }))
+    expect(dear.get('almond')?.captureCost).toBe(1)
+    expect(dear.get('indigo')?.captureCost).toBe(4)
+  })
+
+  test('scoping to one species scores only that species, at the same cost', () => {
+    const scoped = rankAllRecipes(DEFAULT_PLANNER_SETTINGS, SEEMYOOL_COLORS)
+    expect(scoped.size).toBe(SEEMYOOL_COLORS.length)
+    expect(scoped.has('indigo')).toBe(false)
+    // Recipes never cross species, so scoping changes no score.
+    expect(scoped.get('seemyool-ginger')?.captureCost).toBe(
+      rankings.get('seemyool-ginger')?.captureCost,
+    )
+  })
+})
+
+describe('rankRecipes', () => {
+  test('returns the same ranking rankAllRecipes has for that colour', () => {
+    const all = rankAllRecipes(DEFAULT_PLANNER_SETTINGS)
+    for (const id of ['almond', 'indigo', 'seemyool-ginger', 'rhineetle-plum']) {
+      expect(rankRecipes(id, DEFAULT_PLANNER_SETTINGS)).toEqual(all.get(id) ?? null)
+    }
+  })
+
+  test('an unknown colour ranks to null', () => {
+    expect(rankRecipes('not-a-colour', DEFAULT_PLANNER_SETTINGS)).toBeNull()
+  })
+
+  test('a colour outside the scoped set ranks to null', () => {
+    expect(rankRecipes('indigo', DEFAULT_PLANNER_SETTINGS, SEEMYOOL_COLORS)).toBeNull()
+  })
+})
+
+describe('computePlan — the p/k split rule', () => {
+  const guaranteed = settings({ ...GUARANTEED, cloning: false })
+
+  test('a shared pair halves the chance even when p is 1', () => {
+    expect(planChance(guaranteed)).toBe(1)
+    const ranking = rankRecipes('seemyool-almond', guaranteed, COLLIDING)
+    expect(ranking?.chosen?.split).toBe(2)
+    expect(ranking?.chosen?.chance).toBe(0.5)
+  })
+
+  test('and doubles the matings the plan asks for', () => {
+    const plan = computePlan('seemyool-almond', 1, guaranteed, COLLIDING)
+    const pair = plan?.pairs.find((entry) => entry.childId === 'seemyool-almond')
+    expect(pair?.split).toBe(2)
+    expect(pair?.chance).toBe(0.5)
+    // One success at p/k = 0.5 costs two matings, not the one p alone buys.
+    expect(pair?.matings).toBe(2)
+    expect(pair?.successes).toBe(1)
+    // Those 2 matings each spend one bicolor and one Ebony; the bicolor itself
+    // costs 2 more matings, for 4 Ebony + 2 Crimson captured.
+    expect(plan?.totalMatings).toBe(4)
+    expect(plan?.totalCaptures).toBe(6)
+  })
+
+  test('k is 1 for every pair in the shipped data', () => {
+    for (const color of ALL_COLORS) {
+      const plan = computePlan(color.id, 1, DEFAULT_PLANNER_SETTINGS)
+      for (const pair of plan?.pairs ?? []) expect(pair.split).toBe(1)
+    }
+  })
+})
+
+describe('computePlan — multi-recipe colours and species scoping', () => {
+  test('the plan breeds through the recipe the ranking chose', () => {
+    const plan = computePlan('rhineetle-plum', 1, DEFAULT_PLANNER_SETTINGS)
+    const pair = plan?.pairs.find((entry) => entry.childId === 'rhineetle-plum')
+    const chosen = rankRecipes('rhineetle-plum', DEFAULT_PLANNER_SETTINGS)?.chosen
+    expect(pair?.parentAId).toBe(chosen?.parentAId ?? '')
+    expect(pair?.parentBId).toBe(chosen?.parentBId ?? '')
+    expect(pair?.recipeIndex).toBe(chosen?.index ?? -1)
+  })
+
+  test('and carries the 11 recipes it did not use, cheapest first', () => {
+    const plan = computePlan('rhineetle-plum', 1, DEFAULT_PLANNER_SETTINGS)
+    const pair = plan?.pairs.find((entry) => entry.childId === 'rhineetle-plum')
+    const costs = (pair?.alternatives ?? []).map((option: RecipeChoice) => option.captureCost)
+    expect(costs.length).toBe(11)
+    expect([...costs].sort((a, b) => a - b)).toEqual(costs)
+  })
+
+  test('a single-recipe colour has no alternatives', () => {
+    const plan = computePlan('indigo', 1, DEFAULT_PLANNER_SETTINGS)
+    for (const pair of plan?.pairs ?? []) expect(pair.alternatives).toEqual([])
+  })
+
+  test('scoping to one species gives the identical plan', () => {
+    for (const [id, scope] of [
+      ['seemyool-ginger', SEEMYOOL_COLORS],
+      ['rhineetle-plum', RHINEETLE_COLORS],
+    ] as const) {
+      const wide = computePlan(id, 1, DEFAULT_PLANNER_SETTINGS)
+      const scoped = computePlan(id, 1, DEFAULT_PLANNER_SETTINGS, scope)
+      expect(scoped).toEqual(wide)
+    }
+  })
+
+  test('a target from another species is unplannable in a scoped set', () => {
+    expect(computePlan('indigo', 1, DEFAULT_PLANNER_SETTINGS, SEEMYOOL_COLORS)).toBeNull()
+    expect(computePlan('seemyool-ginger', 1, DEFAULT_PLANNER_SETTINGS, RHINEETLE_COLORS)).toBeNull()
+  })
+
+  test('every one of the 306 colours plans without error, within its own species', () => {
+    const configs: PlannerSettings[] = [
+      settings({ ...GUARANTEED, cloning: false }),
+      settings({ ...GUARANTEED, cloning: true }),
+      settings({ parentLevel: 1, optimakina: false, cloning: false }),
+      DEFAULT_PLANNER_SETTINGS,
+    ]
+    for (const config of configs) {
+      for (const color of ALL_COLORS) {
+        const plan: BreedingPlan | null = computePlan(color.id, 1, config)
+        expect(plan).not.toBeNull()
+        if (!plan) continue
+        expect(Number.isFinite(plan.totalMatings)).toBe(true)
+        expect(plan.totalCaptures).toBeGreaterThan(0)
+        // A plan never reaches outside the target's own species.
+        for (const entry of plan.colors) {
+          expect(getColorById(entry.colorId)?.species).toBe(color.species)
+        }
+      }
+    }
+  })
+})
+
+describe('cheapestLineageIds', () => {
+  const rankings = rankAllRecipes(DEFAULT_PLANNER_SETTINGS)
+
+  test('a wild-caught colour is its own whole lineage', () => {
+    expect(cheapestLineageIds('almond', rankings)).toEqual(['almond'])
+  })
+
+  test('an unknown colour yields just itself, rather than throwing', () => {
+    expect(cheapestLineageIds('not-a-colour', rankings)).toEqual(['not-a-colour'])
+  })
+
+  test('it walks parents before grandparents', () => {
+    expect(cheapestLineageIds('indigo', rankings)).toEqual([
+      'indigo',
+      'almond-golden',
+      'almond-ginger',
+      'almond',
+      'golden',
+      'ginger',
+    ])
+  })
+
+  test('with one recipe per colour it matches the union walk exactly', () => {
+    // Every Dragoturkey colour has a single recipe, so "cheapest path" and
+    // "every path" are the same set — phase 1 highlighting is unchanged.
+    for (const color of DRAGOTURKEY_COLORS) {
+      expect(new Set(cheapestLineageIds(color.id, rankings))).toEqual(
+        new Set(getLineageIds(color.id)),
+      )
+    }
+  })
+
+  test('with several recipes it is a strict subset of the union walk', () => {
+    // Rhineetle Plum has 12 recipes: 28 colours are reachable through some
+    // recipe, but only 11 through the cheapest one. Highlighting the union
+    // would light up most of the species.
+    const cheapest = cheapestLineageIds('rhineetle-plum', rankings)
+    const every = getLineageIds('rhineetle-plum')
+    expect(cheapest.length).toBe(11)
+    expect(every.length).toBe(28)
+    for (const id of cheapest) expect(every).toContain(id)
+  })
+
+  test('it is exactly the colour set the plan touches, for all 306 colours', () => {
+    // The tree highlights what the planner would actually breed. If these ever
+    // diverged, the diagram would be showing a path the plan does not take.
+    for (const color of ALL_COLORS) {
+      const plan = computePlan(color.id, 1, DEFAULT_PLANNER_SETTINGS)
+      const planned = new Set((plan?.colors ?? []).map((entry) => entry.colorId))
+      expect(new Set(cheapestLineageIds(color.id, rankings))).toEqual(planned)
+    }
+  })
+
+  test('it follows the settings, because the ranking does', () => {
+    // Cloning off flips which recipes are cheapest for some colours, and the
+    // highlighted lineage has to follow rather than being pinned to a default.
+    const noCloning = rankAllRecipes(settings({ ...GUARANTEED, cloning: false }))
+    for (const color of ALL_COLORS) {
+      const plan = computePlan(color.id, 1, settings({ ...GUARANTEED, cloning: false }))
+      const planned = new Set((plan?.colors ?? []).map((entry) => entry.colorId))
+      expect(new Set(cheapestLineageIds(color.id, noCloning))).toEqual(planned)
+    }
   })
 })

@@ -6,9 +6,9 @@ import {
   PARENT_LEVEL_MIN,
   type PlannerSettings,
 } from '../../core/planner'
-import { DRAGOTURKEY_COLORS, type MountColor } from '../../data'
+import { getColorsBySpecies, type MountColor } from '../../data'
 import { useLocalizedName } from '../../hooks/useLocalizedName'
-import { type PlanUrlState, QUANTITY_MAX, QUANTITY_MIN } from '../../utils/planUrl'
+import { type PlanUrlState, planSpecies, QUANTITY_MAX, QUANTITY_MIN } from '../../utils/planUrl'
 import { matchesSearch } from '../../utils/search'
 
 interface PlannerControlsProps {
@@ -72,12 +72,16 @@ export function PlannerControls({
   const quantityId = useId()
   const levelId = useId()
 
+  // The plan's species, which the target itself decides when there is one —
+  // so the picker can never offer a colour the plan cannot reach.
+  const species = planSpecies(state)
+
   // Grouped by generation so a 19-colour generation stays scannable in the
   // native picker. The current target always survives the filter, otherwise
   // typing a search would blank out the selection.
   const groups = useMemo(() => {
     const byGeneration = new Map<number, MountColor[]>()
-    for (const color of DRAGOTURKEY_COLORS) {
+    for (const color of getColorsBySpecies(species)) {
       if (color.id !== state.targetId && !matchesSearch(color, query)) continue
       const bucket = byGeneration.get(color.generation) ?? []
       bucket.push(color)
@@ -90,7 +94,7 @@ export function PlannerControls({
         generation,
         colors: [...colors].sort((a, b) => name(a).localeCompare(name(b), language)),
       }))
-  }, [query, state.targetId, language])
+  }, [species, query, state.targetId, language])
 
   const isDefaultSettings =
     state.settings.parentLevel === DEFAULT_PLANNER_SETTINGS.parentLevel &&

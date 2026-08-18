@@ -1,15 +1,22 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { getChildrenIds, getColorById, type MountColor, WILD_CAPTURE_INFO } from '../data'
+import type { RecipeChoice, RecipeRanking } from '../core/planner'
+import { getChildrenIds, getColorById, getSpecies, type MountColor } from '../data'
 import { useLocalizedName } from '../hooks/useLocalizedName'
 
 interface DetailPanelProps {
   color: MountColor | null
+  /**
+   * The colour's ranked recipes, cheapest first. Optional so the panel still
+   * renders without a ranking; the recipe list then falls back to the colour's
+   * own `crosses` order, unpriced.
+   */
+  ranking?: RecipeRanking | null
   onSelect: (id: string) => void
   onClose?: () => void
 }
 
-export function DetailPanel({ color, onSelect, onClose }: DetailPanelProps) {
+export function DetailPanel({ color, ranking, onSelect, onClose }: DetailPanelProps) {
   const { t } = useTranslation()
   const { bareName, fullName, language } = useLocalizedName()
 
@@ -22,9 +29,35 @@ export function DetailPanel({ color, onSelect, onClose }: DetailPanelProps) {
   }
 
   const children = getChildrenIds(color.id)
-  const [parentAId, parentBId] = color.crosses?.[0] ?? []
-  const parentA = parentAId ? getColorById(parentAId) : undefined
-  const parentB = parentBId ? getColorById(parentBId) : undefined
+
+  // Every recipe, cheapest first — the brief requires the panel to list them
+  // all even though the tree draws only one. Without a ranking (no planner
+  // context) the colour's own storage order stands in, priced at nothing.
+  const recipes: readonly RecipeChoice[] =
+    ranking?.options ??
+    (color.crosses ?? []).map((recipe, index) => ({
+      index,
+      parentAId: recipe[0],
+      parentBId: recipe[1],
+      split: 1,
+      chance: 0,
+      captureCost: Number.NaN,
+    }))
+
+  // Every mount of a species carries its species bonus on top of the colour's
+  // own, so it is shown once here rather than folded into each colour's list.
+  const species = getSpecies(color.species)
+  const commonBonus = `${species.commonBonus.value}${
+    species.commonBonus.unit === '%' ? '%' : ''
+  } ${t(`stats.${species.commonBonus.stat}`)}`
+  const commonBonusText =
+    species.commonBonusFromLevel === undefined
+      ? t('species.commonBonus', { species: species.singular[language], bonus: commonBonus })
+      : t('species.commonBonusFromLevel', {
+          species: species.singular[language],
+          bonus: commonBonus,
+          level: species.commonBonusFromLevel,
+        })
 
   return (
     <aside className="w-full shrink-0 space-y-4 overflow-y-auto rounded-lg border border-(--color-border) bg-(--color-panel) p-4 md:w-80">
@@ -59,6 +92,14 @@ export function DetailPanel({ color, onSelect, onClose }: DetailPanelProps) {
 
       <section>
         <h3 className="mb-1 text-xs font-semibold tracking-wide text-(--color-gold) uppercase">
+          {t('species.commonBonusLabel')}
+        </h3>
+        <p className="text-sm">{commonBonusText}</p>
+        <p className="text-xs text-(--color-text-muted)">{t('species.commonBonusNote')}</p>
+      </section>
+
+      <section>
+        <h3 className="mb-1 text-xs font-semibold tracking-wide text-(--color-gold) uppercase">
           {t('detail.bonuses')}
         </h3>
         <ul className="space-y-0.5 text-sm">
@@ -78,31 +119,71 @@ export function DetailPanel({ color, onSelect, onClose }: DetailPanelProps) {
         {color.wildCapture ? (
           <div className="text-sm">
             <p className="mb-1 font-medium">{t('detail.wildCaptureLabel')}</p>
-            <p className="text-(--color-text-muted)">
-              {language === 'fr' ? WILD_CAPTURE_INFO.fr : WILD_CAPTURE_INFO.en}
-            </p>
+            <p className="text-(--color-text-muted)">{species.wildCapture[language]}</p>
           </div>
         ) : (
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            {parentA && (
-              <button
-                type="button"
-                onClick={() => onSelect(parentA.id)}
-                className="rounded border border-(--color-border) px-2 py-0.5 hover:border-(--color-accent)"
-              >
-                {bareName(parentA)}
-              </button>
-            )}
-            <span className="text-(--color-text-muted)">+</span>
-            {parentB && (
-              <button
-                type="button"
-                onClick={() => onSelect(parentB.id)}
-                className="rounded border border-(--color-border) px-2 py-0.5 hover:border-(--color-accent)"
-              >
-                {bareName(parentB)}
-              </button>
-            )}
+          <div className="space-y-2">
+            <p className="text-xs text-(--color-text-muted)">
+              {t('detail.recipesLabel', { count: recipes.length })}
+            </p>
+            <ol className="space-y-1.5">
+              {recipes.map((recipe, position) => {
+                const parentA = getColorById(recipe.parentAId)
+                const parentB = getColorById(recipe.parentBId)
+                // Only the first entry is the one the tree draws and the
+                // planner breeds; `options` is already sorted cheapest-first.
+                const isCheapest = position === 0 && ranking != null
+                return (
+                  <li
+                    key={recipe.index}
+                    className={`rounded border p-2 ${
+                      isCheapest
+                        ? 'border-(--color-accent) bg-(--color-panel-raised)'
+                        : 'border-(--color-border)'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center gap-1.5 text-sm">
+                      {parentA && (
+                        <button
+                          type="button"
+                          onClick={() => onSelect(parentA.id)}
+                          className="rounded border border-(--color-border) px-2 py-0.5 hover:border-(--color-accent)"
+                        >
+                          {bareName(parentA)}
+                        </button>
+                      )}
+                      <span className="text-(--color-text-muted)">+</span>
+                      {parentB && (
+                        <button
+                          type="button"
+                          onClick={() => onSelect(parentB.id)}
+                          className="rounded border border-(--color-border) px-2 py-0.5 hover:border-(--color-accent)"
+                        >
+                          {bareName(parentB)}
+                        </button>
+                      )}
+                    </div>
+                    {Number.isFinite(recipe.captureCost) && (
+                      <p
+                        className="mt-1 text-xs text-(--color-text-muted)"
+                        title={t('detail.recipeCostHint')}
+                      >
+                        {isCheapest && (
+                          <span className="mr-1 font-semibold text-(--color-accent)">
+                            {`${t('detail.recipeCheapest')} · `}
+                          </span>
+                        )}
+                        {t('detail.recipeCost', {
+                          cost: recipe.captureCost.toLocaleString(language, {
+                            maximumFractionDigits: 2,
+                          }),
+                        })}
+                      </p>
+                    )}
+                  </li>
+                )
+              })}
+            </ol>
           </div>
         )}
       </section>

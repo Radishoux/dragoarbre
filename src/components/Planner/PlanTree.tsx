@@ -1,7 +1,7 @@
-import { type ReactNode, useMemo } from 'react'
+import { type ReactNode, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { BreedingPlan } from '../../core/planner'
-import { getColorById, getLineageIds, type MountColor } from '../../data'
+import { getColorById, type MountColor } from '../../data'
 import { useLocalizedName } from '../../hooks/useLocalizedName'
 import { BreedingTree, type NodeState } from '../BreedingTree/BreedingTree'
 
@@ -24,16 +24,20 @@ export function PlanTree({ plan, onSelect }: PlanTreeProps): ReactNode {
   const { t } = useTranslation()
   const { bareName } = useLocalizedName()
 
-  // Only the ancestry is passed in: BreedingTree lays out and draws edges from
-  // whatever list it receives, so restricting the list restricts the diagram.
+  // Only the plan's own colours are passed in: BreedingTree lays out and draws
+  // edges from whatever list it receives, so restricting the list restricts the
+  // diagram. This is the plan's colour set rather than `getLineageIds`, which
+  // walks every recipe — for a 12-recipe Rhineetle that is 28 colours where the
+  // plan breeds 11, and the extra 17 would sit there with no badge and, since
+  // the plan mates no pair for them, no edges either.
   const lineageColors = useMemo<MountColor[]>(() => {
     const colors: MountColor[] = []
-    for (const id of getLineageIds(plan.targetId)) {
-      const color = getColorById(id)
+    for (const entry of plan.colors) {
+      const color = getColorById(entry.colorId)
       if (color) colors.push(color)
     }
     return colors
-  }, [plan.targetId])
+  }, [plan.colors])
 
   // Plain digits, deliberately not locale-grouped: a badge pill is only a few
   // characters wide, and TreeNode parses the text back to a number to build its
@@ -46,6 +50,18 @@ export function PlanTree({ plan, onSelect }: PlanTreeProps): ReactNode {
   // Every colour in the list is by construction part of the plan, so the only
   // distinction left to draw is target versus the rest of its lineage.
   const getNodeState = (id: string): NodeState => (id === plan.targetId ? 'selected' : 'lineage')
+
+  // The plan mates exactly one pair per colour, so the diagram draws that pair
+  // and not the alternatives: a 12-recipe target would otherwise sprout edges
+  // to parents the plan never breeds and shows no count for.
+  const parentsByChild = useMemo(
+    () => new Map(plan.pairs.map((pair) => [pair.childId, [pair.parentAId, pair.parentBId]])),
+    [plan.pairs],
+  )
+  const parentsFor = useCallback(
+    (color: MountColor) => parentsByChild.get(color.id) ?? [],
+    [parentsByChild],
+  )
 
   return (
     <section className="flex min-h-0 flex-col">
@@ -67,6 +83,7 @@ export function PlanTree({ plan, onSelect }: PlanTreeProps): ReactNode {
           getNodeState={getNodeState}
           nameFor={bareName}
           badges={badges}
+          parentsFor={parentsFor}
         />
       </div>
     </section>

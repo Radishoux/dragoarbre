@@ -14,7 +14,6 @@ each field means, where it came from, and how to fix it.
 | `src/data/speciesInfo.ts` | Per-species metadata: the species word, the common bonus every mount of it carries, and where generation 1 is captured. |
 | `src/data/species.ts` | Not data — the `buildSpecies()` builder that derives a species' bicolors from its monocolors, plus the `colorId()` id rule. |
 | `src/data/specials.ts` | The 2 special Dragoturkeys (bought, not bred). |
-| `src/data/wildCapture.ts` | Deprecated alias. Wild-capture text moved onto `speciesInfo.ts` in phase 3, since each species is captured somewhere different. |
 | `src/data/index.ts` | Public data API: re-exports the three datasets and derives the reverse "children of" index and lineage lookups across all of them. Nothing here is hand-maintained data. |
 
 Every raw data file starts with a header comment naming its source brief and
@@ -42,7 +41,8 @@ used for breeding-tree stat filtering, and specials aren't part of the tree at a
 `src/data/index.ts` computes, once at module load, purely from the three datasets:
 
 - `getChildrenIds(id)` — the reverse of `crosses`: which colors a given color helped produce. Deduped, so a parent used by two recipes of the same child is listed once.
-- `getAncestorIds(id)` / `getLineageIds(id)` — recursive walk back to generation-1 roots, used for the tree's lineage highlighting.
+- `getAncestorIds(id)` / `getLineageIds(id)` — recursive walk back to generation-1 roots, following **every** recipe. For a 12-recipe Rhineetle that is the union of all its ancestry paths (28 colours for Plum), which is what you want when asking "what could this ever be made from".
+- Lineage *highlighting* in the tree uses `cheapestLineageIds()` from `src/core/planner.ts` instead — the same walk restricted to each colour's chosen recipe (11 colours for Plum). It lives in `core/` rather than here because it depends on the planner's cost ranking, which `src/data/` must not know about.
 
 If you ever see one of these values look wrong, the bug is in the source
 data's `crosses` field, not in the derivation logic — fix the data, not the index.

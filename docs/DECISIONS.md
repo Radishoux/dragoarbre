@@ -503,3 +503,174 @@ composed names carry a verify flag until someone checks them in game — and
 because they are composed rather than stored, correcting the rule is a
 one-line change rather than 210 edits. Phase 1's transcribed Dragoturkey
 names are untouched, as the brief requires.
+
+---
+
+## 2026-08-18 — Cheapest-recipe selection, scored in wild captures
+
+**Context:** Phase 2 could assume one recipe per colour. Phase 3 cannot —
+21 of the 306 colours have several, up to 12 for a Rhineetle Emerald or Plum.
+The planner has to choose one, and "cheapest" needs a unit before it means
+anything. Candidates: fewest matings, fewest intermediate mounts, shortest
+path, fewest wild captures.
+
+**Decision:** Score a recipe by the total expected **wild captures** of the
+colour's full recursive plan, as brief section 8 specifies:
+`cost(X) = min over recipes (A, B) of (k / p) * f * (cost(A) + cost(B))`, with
+wild-caught colours costing 1. Memoise it as a single ascending-generation
+sweep rather than a recursive walk with a cache. Break ties lexicographically
+on the pair of parent ids compared as an *ordered* pair, then on recipe index.
+
+**Consequences:** Captures are the right unit because they are the only
+resource a player has to leave the paddock to get — matings and intermediate
+mounts are consequences of the capture count, not independent costs.
+
+The ascending sweep is the mirror of `computePlan()`'s descending one and rests
+on the same invariant (every recipe points to a strictly lower generation), so
+one pass reaches a colour only once both parents are scored. Linear in recipes,
+whatever the fan-out.
+
+Two consequences are worth stating because they look like bugs:
+
+1. **The ranking depends on the settings.** Cost of a path of length `n` goes
+   as `(f / p)^n`, so with `f / p < 1` a *deeper* recipe scores cheaper. This is
+   the amortised-cloning assumption showing up structurally — the same one
+   already recorded under "monotonicity holds only without cloning".
+2. **At `p = 1` with cloning on, every recipe ties**, because `f / p` is exactly
+   0.5 and every colour costs exactly 1.0 captures per mount. Ties are therefore
+   common rather than rare, which is why the tie-break has to be deterministic
+   and why costs are compared with a relative tolerance — two structurally
+   equivalent recipes drift apart in the last bits of a float after a dozen
+   multiplications, and would otherwise order by that drift.
+
+Both are pinned by tests so neither can change silently.
+
+---
+
+## 2026-08-18 — The split rule is implemented generically, then asserted absent
+
+**Context:** Brief section 8 defines it: if one exact parent pair appears in the
+recipe lists of `k` different colours of the same target generation, the
+target-generation pool is split and the effective chance for the colour you
+want is `p / k`. The brief also states that in the transcribed data `k` is 1
+everywhere.
+
+**Decision:** Implement the rule generically anyway, and add
+`findRecipeCollisions(colors)` whose result `planner.test.ts` requires to be
+empty on the shipped data. Keep the `k > 1` branch under test with a synthetic
+species whose two generation-3 monocolors share one parent pair.
+
+**Consequences:** "There are no collisions" becomes an assertion rather than an
+assumption. A future data correction that introduces one cannot silently divide
+every probability in the plan — either the detector fails the build, or it
+meets code that already handles it correctly.
+
+The detector also had to settle what `k` counts. It counts distinct *colours*
+competing for one generation's pool, not recipe entries: a colour listing the
+same pair twice counts once, and the same pair feeding two colours at
+*different* generations is not a collision, since they never compete. Both are
+pinned by tests.
+
+The cost of carrying an unexercised branch is one function and a fixture. The
+cost of not carrying it would be a silently wrong plan.
+
+---
+
+## 2026-08-18 — Lineage highlighting follows the cheapest path, not every path
+
+**Context:** Phase 1's tree highlighted `getLineageIds(selected)` — the walk
+back to generation 1 following every recipe. With one recipe per colour that is
+the only path there is. With twelve it is the union of all of them: 28 colours
+for a Rhineetle Plum whose plan actually breeds 11.
+
+**Decision:** Add `cheapestLineageIds(colorId, rankings)` to `src/core/planner.ts`
+and highlight that instead. Brief section 9 asks for it, and the edges drawn in
+the same view already follow the cheapest recipe, so the alternative was a
+diagram whose highlighting and edges disagreed.
+
+**Consequences:** It lives in `core/` rather than `src/data/` because it depends
+on the planner's cost ranking, and the data layer must not know the planner
+exists. `getLineageIds()` stays as-is and is still right for "what could this
+ever be made from".
+
+A property test asserts the two agree where it matters: `cheapestLineageIds()`
+equals exactly `computePlan()`'s colour set, for all 306 colours under two
+settings profiles. If the tree's highlighting and the plan ever diverged, that
+fails rather than the UI quietly showing a path nothing takes.
+
+---
+
+## 2026-08-18 — One recipe's edges by default, revealed per node
+
+**Context:** The Dragoturkey tree draws 126 edges over 66 nodes. Drawing every
+recipe's edges for the new species gives 280 over 120 — sixteen converging on a
+single Rhineetle — which is unreadable at the zoom level where you can also read
+the labels.
+
+**Decision:** `BreedingTree` takes an optional `parentsFor(color)` prop. Omitted,
+it draws every parent across every recipe, which is the phase 1 behaviour and
+correct for a single-recipe colour. `TreePage` passes the cheapest recipe's two
+parents (280 → 232 edges), with a toggle on the selected node revealing all of
+its recipes; `PlanTree` passes the pairs the plan actually mates. The detail
+panel always lists every recipe regardless, cheapest first and priced.
+
+**Consequences:** The default view answers "how do I actually make this", and
+the full recipe set stays one click away in two places. Making the prop optional
+meant no existing caller changed behaviour.
+
+Keeping the toggle on the node rather than in a toolbar is what the brief
+suggests, and it costs an event-propagation subtlety: the node itself is
+clickable, so the toggle must stop the click reaching it or revealing recipes
+would also re-select the node.
+
+The reveal is *derived* rather than stored as its own synchronised state — it
+survives only while its node stays selected, so `revealedId === activeId ?
+revealedId : null` closes it on a new selection and on a species change at once,
+with no effect to keep in sync.
+
+---
+
+## 2026-08-18 — The species word comes from the data registry, not an i18n key
+
+**Context:** `useLocalizedName()` composed full display names with
+`t('species.dragoturkeySingular')` — correct in phase 1, when there was one
+species. With three, every Seemyool and Rhineetle would have been titled
+"… Dragoturkey".
+
+**Decision:** Read `getSpecies(color.species).singular[language]` from
+`speciesInfo.ts` instead, and delete the now-orphaned i18n key.
+
+**Consequences:** The species word is per-species game data, and `speciesInfo.ts`
+is already the cross-cutting registry the UI reads to render a tab — so this
+puts it where the sourcing rule can see it, rather than in the UI-chrome layer.
+It also means adding a fourth species needs no new i18n key for its name.
+
+The general line: `{ fr, en }` on a data record is for content; `translation.json`
+is for UI chrome. The species word was on the wrong side of it.
+
+---
+
+## 2026-08-18 — Filter options are derived from the species on screen
+
+**Context:** `SearchFilters` carried a hardcoded 12-entry stat list from phase 1.
+The tree became species-aware in phase 3; its filter did not. So a Seemyool could
+not be filtered by Earth Resistance, Lock or MP Parry at all, while the list
+offered Vitality, which no colour carries — it is the species-wide bonus, kept
+out of every colour's `bonuses` by design.
+
+**Decision:** Derive the options from the colours currently on screen, in order
+of first appearance. Dragoturkey 11, Seemyool 15, Rhineetle 15.
+
+**Consequences:** The dead Vitality option disappears and 30-odd genuinely
+useful ones appear. Order of first appearance is ascending generation, so the
+list reads the way the tree does, and it reproduces phase 1's order for
+Dragoturkeys minus the dead entry — no arbitrary re-sort to justify.
+
+A stat the next species does not carry is dropped rather than left set, which
+would have filtered every node away and read as an empty tree. Same derived-not-
+synchronised pattern as the selection and the reveal.
+
+This one is worth recording less for the decision than for how it was found: it
+survived four parallel agents and two green test runs, because every track was
+individually correct and no test covered "the filter offers what the data has".
+The integration pass is where it surfaced, which is what that pass is for.
