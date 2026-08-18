@@ -404,3 +404,102 @@ The pinned test vectors in `src/core/planner.test.ts` stay exactly as they
 are — a future contributor reading the phase 2 brief and "correcting" the
 code toward it would be reintroducing the brief's own error. Neither is to
 be reverted.
+
+---
+
+## 2026-08-18 — `cross` becomes a `crosses` list
+
+**Context:** Every Dragoturkey color has exactly one recipe, so phase 1
+modelled it as `cross?: [string, string]`. Seemyools and Rhineetles do
+not: their odd-generation monocolors can each be produced by several
+parent pairs — up to 12 for a single Rhineetle Prune or Émeraude.
+
+**Decision:** Replace the tuple with `crosses?: readonly Recipe[]`, where
+`Recipe = readonly [string, string]`. Dragoturkey colors carry a
+one-element list. The `mono()` / `bicolor()` builders keep taking a single
+pair and wrap it, so none of the 66 phase 1 entries were rewritten — the
+migration diff physically cannot have altered a value, and the existing 61
+tests passing with an unchanged assertion count is the proof.
+
+**Consequences:** Two derivations had to get more careful. `getParentIds()`
+takes the union of parents across all of a color's recipes, so ancestry
+follows every path rather than an arbitrary one, and the reverse
+"children of" index dedupes so a parent shared by two recipes of the same
+child is listed once. The tree dedupes the same way before drawing edges,
+which also keeps its React keys unique. Consumers that display a single
+recipe read `crosses[0]`, which is exact for Dragoturkeys and became the
+planner-chosen recipe for the other two species.
+
+---
+
+## 2026-08-18 — Species are built from their monocolors, not enumerated
+
+**Context:** The two new species have 120 colors each. Brief section 3
+establishes that only the odd-generation monocolors are irregular:
+bicolors are exactly every unordered pair of distinct monocolors, with
+`generation = max + 1`, a single recipe of the two monocolors, and bonuses
+equal to the two bicolor components summed. The brief leaves the choice of
+generating or enumerating them to us.
+
+**Decision:** Generate. `src/data/species.ts#buildSpecies()` takes a
+species' 15 monocolors and derives the other 105 entries. Recipes are
+transcribed in the brief's own vocabulary — a parent is either a
+monocolor id or a bicolor named by its two monocolors, in either order —
+and a reference that resolves to nothing throws at module load rather than
+leaving a dangling id.
+
+**Consequences:** 30 hand-written monocolors instead of 240 hand-written
+entries. The 210 derived bicolors cannot carry a transcription typo,
+because there is nothing to transcribe; the integrity tests still assert
+the brief's exact per-generation counts, so a wrong *monocolor* generation
+surfaces as a count mismatch. Dragoturkeys are deliberately not built this
+way: their entries are the phase 1 source of truth, with known
+irregularities in their bonus values, and the brief says to leave them
+alone. The cost is that a genuine in-game irregularity among the new
+species' bicolors cannot be expressed without adding an override
+mechanism — an acceptable trade while no such irregularity is known.
+
+---
+
+## 2026-08-18 — New species prefix their color ids; Dragoturkeys do not
+
+**Context:** All three species have an "Amande", a "Pourpre" and an
+"Ivoire". Color ids key the URL (`#/planner?target=almond`), the data
+indices and the routing, so they must be unique across the whole app.
+
+**Decision:** Seemyool and Rhineetle ids are prefixed
+(`seemyool-almond`, `rhineetle-almond`); Dragoturkey ids stay bare
+(`almond`). The asymmetry is deliberate. `docs/DATA.md` freezes shipped
+ids — "never reused, never renamed once shipped" — and phase 2 links are
+live in the wild, so renaming the Dragoturkey set would break every shared
+plan URL for a purely cosmetic symmetry.
+
+**Consequences:** `colorId(species, bare)` is the single place that knows
+the rule, and nothing else needs to. A reader seeing bare and prefixed ids
+side by side should read it as "the bare ones shipped first", not as an
+oversight.
+
+---
+
+## 2026-08-18 — Bicolor display names are composed alphabetically
+
+**Context:** The brief gives explicit names for the 30 new monocolors but
+for none of the 210 new bicolors, so their names must be composed. Phase 1
+transcribed Dragoturkey bicolor names from its own source and those names
+follow no single rule — "Prune et Ivoire" puts the higher generation
+first, "Amande et Dorée" is alphabetical.
+
+**Decision:** Compose alphabetically within each language, accent-
+insensitively, so "Ébène" sorts as "Ebene" rather than last. Both
+officially-confirmed examples in brief section 6 — "Almond and Emerald
+Seemyool" and "Almond and Crimson Rhineetle" — are alphabetical, and they
+are the only evidence available for the new species. The id follows the
+English order so it reads the way the English label does.
+
+**Consequences:** FR and EN can order the same bicolor differently; each
+then reads correctly in its own language, which is the point. This is a
+judgment call on data we do not have, not a transcribed fact, so the
+composed names carry a verify flag until someone checks them in game — and
+because they are composed rather than stored, correcting the rule is a
+one-line change rather than 210 edits. Phase 1's transcribed Dragoturkey
+names are untouched, as the brief requires.
