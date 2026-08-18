@@ -1,7 +1,7 @@
 # Task Board — Phase 3 (Seemyools and Rhineetles)
 
-Last update: 2026-08-19 01:00
-Current wave: Wave 3 — T10 done. The documentation set now matches the shipped code. `tsc -b` clean, 175 tests / 40 259 assertions passing, `biome check` with 0 errors, `vite build` succeeding. **T11 (deploy and verify live) is the only task left**, and it is the one task that needs a commit and a push.
+Last update: 2026-08-19 01:30
+Current wave: **Phase 3 complete.** All 11 tasks done. Committed as `1586adf` and pushed to `main`; CI ran tests, lint and build on the runner and deployed to GitHub Pages. Verified live at https://radishoux.github.io/dragoarbre/ — all three species, both languages, and phase 2 links still resolving unchanged.
 
 | ID | Task | Owner | Status | Depends on | Notes |
 |----|------|-------|--------|------------|-------|
@@ -15,7 +15,7 @@ Current wave: Wave 3 — T10 done. The documentation set now matches the shipped
 | T8 | Multi-recipe tree rendering + detail panel recipe list | lead | done | T6, T7 | All four of brief §9's asks: the tree defaults to the cheapest recipe's edges (Rhineetle 280 → 232), a reveal toggle on the selected multi-recipe node shows the rest, the panel lists every recipe cheapest-first with its capture cost, and lineage highlighting follows the cheapest path via the new `cheapestLineageIds()` (Plum 28 → 11). `BreedingTree` took an optional `parentsFor` prop; `PlanTree` now draws the pairs the plan actually mates |
 | T9 | Integration: merge, resolve seams, i18n key audit (duplicates/orphans/repurposed), full `bun test` + lint + build | lead | done | T4,T5,T6,T7,T8 | Audit scripted, not eyeballed: FR/EN parity exact (166 = 166), 0 keys used-but-undefined, 0 orphans after removing 7, and every stat/element/species key the data actually needs is translated in both locales. Found and fixed a real seam the per-track work could not see: the stat filter was a hardcoded Dragoturkey list |
 | T10 | Documentation pass: DATA.md, ARCHITECTURE.md, DECISIONS.md, OVERVIEW.md, README.md, CLAUDE.md roadmap | lead | done | T9 | All six updated against brief §10. ARCHITECTURE gained the cheapest-recipe and split-rule sections with all three Mermaid diagrams redrawn; DECISIONS gained 6 appended entries (28 total); OVERVIEW and CLAUDE.md record the future ideas §10 asks for without committing to them |
-| T11 | Deploy to GitHub Pages via CI and verify live | lead | todo | T9, T10 | Definition of done, brief §11 |
+| T11 | Deploy to GitHub Pages via CI and verify live | lead | done | T9, T10 | Commit `1586adf` pushed to `main` (7 commits total, including the 6 wave-0/1 ones). Run 32188449519 green: tests, lint, build, deploy. Live site verified — see below |
 
 ## Wave plan
 
@@ -75,3 +75,40 @@ Shared root files (`package.json`, `bun.lock`, vite/tsconfig/biome config, CI wo
 ## T11 — what remains
 
 The only open task, and the first that needs a commit. Everything else is done and verified. Definition of done, brief §11: CI deploys to GitHub Pages and the live site is checked.
+
+## T11 — deployed and verified live
+
+Commit `1586adf` on `main`. Note the default branch here is `main`, not the
+workspace repo's `master`; the deploy workflow triggers on `main` only.
+
+CI run 32188449519: install, `bun test`, `bun run lint`, `bun run build`,
+Pages deploy — all green on the runner, 31s. One pre-existing annotation about
+Node 20 deprecation in `actions/checkout@v4` / `configure-pages@v5` /
+`upload-artifact@v4`; it is a warning about the actions themselves, not our
+build, and is worth a separate bump.
+
+Verified against the live site, not localhost:
+
+| Check | Live result |
+|---|---|
+| Dragoturkey tree | 66 nodes / 126 edges, 11 stat filter options |
+| Seemyool tree | 120 nodes / 230 edges, 15 stat options |
+| Rhineetle tree | 120 nodes / 232 edges, 15 stat options |
+| Detail panel, Rhineetle Plum | 12 recipes, cheapest 3.63 captures/mount |
+| Reveal toggle | "Show all 12 recipes" on the selected node |
+| Cheapest-path highlighting | 11 nodes lit, not the union's 28 |
+| Plan for Rhineetle Plum | 5 safe / 3.6 expected captures, 8.8 matings, 35.8 genetokens, 11 plan nodes |
+| FR | "Planificateur d'élevage", Dragodindes / Muldos / Volkornes |
+| Phase 2 link `#/planner?target=indigo&qty=2&level=200&opti=1&clone=0` | resolves unchanged, no `?species=` injected, 8 captures / 6 matings |
+| Raw i18n keys leaked | none |
+| Console errors | none |
+
+Every figure matches what the planner computes locally.
+
+## Phase 3 retrospective — for whoever runs phase 4
+
+- **Four parallel agents produced individually-correct work with a seam none of them could see.** The stat filter stayed a hardcoded Dragoturkey list through two green test runs, because every track was correct within its own file ownership and no test covered "the filter offers what the data has". The T9 integration pass is what caught it. Budget for that pass; it is not a formality.
+- **Both code agents died mid-file on transport errors, twice each.** What survived on disk was in each case complete and compiling in one file and half-written in another. Resuming from the transcript worked the first time; the second time the lead finishing the bounded remainder was faster and produced the T6/T7 seam knowledge T9 needed anyway.
+- **Browser verification caught what tests could not**, three times: a `speciesSearch` that typechecked as a missing identifier only, a missing space in "Cheapest ·3.63", and the stat filter. Green tests are necessary and not sufficient — see the standing note in the user's own memory.
+- **Watch for stale bundles.** The dev server serves the previous build after a restart; two measurements were wrong before a hard reload. Any edge or node count taken without one is suspect.
+- **Keep scratch files outside the project.** A probe written into the repo triggered a Vite hot-reload mid-verification and reset component state, briefly looking like a bug.
