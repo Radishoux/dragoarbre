@@ -19,7 +19,7 @@ interface BreedingTreeProps {
 
 /**
  * The pan/zoom breeding-tree SVG: one column per generation, cubic edges along
- * each `cross`, and one {@link TreeNode} per colour.
+ * each `crosses` edge, and one {@link TreeNode} per colour.
  *
  * `colors` may be any subset of a species' colours — the planner passes only a
  * target's ancestry — and `badges` is purely additive decoration on top.
@@ -58,10 +58,13 @@ export function BreedingTree({
   const edges = useMemo(() => {
     const lines: { id: string; x1: number; y1: number; x2: number; y2: number }[] = []
     for (const color of colors) {
-      if (!color.cross) continue
+      if (!color.crosses) continue
       const childPos = layout.positions.get(color.id)
       if (!childPos) continue
-      for (const parentId of color.cross) {
+      // Union across recipes: a parent shared by two recipes of the same
+      // child would otherwise draw the identical line twice, and duplicate
+      // React keys with it.
+      for (const parentId of new Set(color.crosses.flat())) {
         const parentPos = layout.positions.get(parentId)
         if (!parentPos) continue
         lines.push({

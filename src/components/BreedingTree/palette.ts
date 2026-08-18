@@ -27,7 +27,7 @@ export function getSwatch(colorId: string): Swatch {
   if (mono) return { kind: 'mono', hex: mono }
 
   const color = getColorById(colorId)
-  const [parentA, parentB] = color?.cross ?? []
+  const [parentA, parentB] = color?.crosses?.[0] ?? []
   return {
     kind: 'bicolor',
     hexA: (parentA && MONO_SWATCH[parentA]) || '#666',

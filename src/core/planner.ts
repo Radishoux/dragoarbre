@@ -180,7 +180,7 @@ export function parentConsumptionFactor(cloning: boolean): number {
  * ```
  *
  * Evaluated iteratively in descending generation order rather than by literal
- * recursion. Every `cross` edge points to a strictly lower generation (a data
+ * recursion. Every `crosses` edge points to a strictly lower generation (a data
  * invariant enforced by `src/data/colors.test.ts`), so one descending sweep
  * visits each colour only after every colour that consumes it — the same
  * result as the recursion, but linear in the number of colours instead of
@@ -223,12 +223,17 @@ export function computePlan(
   for (const color of descending) {
     const want = needed.get(color.id)
     if (!want || want <= 0) continue
-    if (!color.cross) continue // generation 1: captured in the wild, never bred
+    // Phase 3 will pick the cheapest of several recipes; every Dragoturkey
+    // colour has exactly one, so taking the first preserves phase 2 behaviour
+    // exactly for the only species that currently has data. A generation-1
+    // colour has none at all and is captured in the wild rather than bred.
+    const recipe = color.crosses?.[0]
+    if (!recipe) continue
 
     const matings = want / chance
     matingsByColor.set(color.id, matings)
 
-    const [parentAId, parentBId] = color.cross
+    const [parentAId, parentBId] = recipe
     pairs.push({
       childId: color.id,
       parentAId,
@@ -237,7 +242,7 @@ export function computePlan(
       successes: tidy(want),
     })
 
-    for (const parentId of color.cross) {
+    for (const parentId of recipe) {
       needed.set(parentId, (needed.get(parentId) ?? 0) + matings * factor)
     }
   }

@@ -119,7 +119,7 @@ describe('computePlan — Indigo reference vectors', () => {
       'indigo',
     ])
     for (const pair of plan.pairs) {
-      expect(getColorById(pair.childId)?.cross).toEqual([pair.parentAId, pair.parentBId])
+      expect(getColorById(pair.childId)?.crosses).toEqual([[pair.parentAId, pair.parentBId]])
     }
   })
 })
@@ -188,11 +188,11 @@ describe('computePlan — properties across all 66 colours', () => {
 
     for (const config of withoutCloning) {
       for (const color of DRAGOTURKEY_COLORS) {
-        if (!color.cross) continue
+        if (!color.crosses) continue
         const plan = computePlan(color.id, 1, config)
         if (!plan) throw new Error('expected a plan')
 
-        for (const parentId of color.cross) {
+        for (const parentId of color.crosses.flat()) {
           const parentPlan = computePlan(parentId, 1, config)
           if (!parentPlan) throw new Error('expected a plan')
           expect(plan.totalMatings).toBeGreaterThanOrEqual(parentPlan.totalMatings - 1e-9)

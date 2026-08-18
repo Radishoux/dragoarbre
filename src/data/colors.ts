@@ -7,18 +7,25 @@
  * Do not add, remove or alter values here without an updated source brief —
  * see `docs/DATA.md` for the correction process.
  */
-import type { Bonus, MountColor } from './types'
+import type { Bonus, MountColor, Recipe } from './types'
 
 const flat = (stat: Bonus['stat'], value: number): Bonus => ({ stat, value, unit: 'flat' })
 const pct = (stat: Bonus['stat'], value: number): Bonus => ({ stat, value, unit: '%' })
 
-/** Builds a mono (odd-generation) color entry. */
+/**
+ * Builds a mono (odd-generation) color entry.
+ *
+ * The `cross` parameter stays a single pair: every Dragoturkey color has
+ * exactly one recipe, and keeping the builder's shape meant the 66 entries
+ * below did not have to be rewritten when the model moved to
+ * {@link MountColor.crosses}. It is wrapped into a one-element list here.
+ */
 function mono(
   id: string,
   generation: number,
   name: MountColor['name'],
   bonuses: Bonus[],
-  cross?: [string, string],
+  cross?: Recipe,
 ): MountColor {
   return {
     id,
@@ -27,7 +34,7 @@ function mono(
     kind: 'mono',
     name,
     bonuses,
-    ...(cross ? { cross } : { wildCapture: true as const }),
+    ...(cross ? { crosses: [cross] } : { wildCapture: true as const }),
   }
 }
 
@@ -37,9 +44,17 @@ function bicolor(
   generation: number,
   name: MountColor['name'],
   bonuses: Bonus[],
-  cross: [string, string],
+  cross: Recipe,
 ): MountColor {
-  return { id, species: 'dragoturkey', generation, kind: 'bicolor', name, bonuses, cross }
+  return {
+    id,
+    species: 'dragoturkey',
+    generation,
+    kind: 'bicolor',
+    name,
+    bonuses,
+    crosses: [cross],
+  }
 }
 
 export const DRAGOTURKEY_COLORS: MountColor[] = [

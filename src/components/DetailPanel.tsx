@@ -22,7 +22,7 @@ export function DetailPanel({ color, onSelect, onClose }: DetailPanelProps) {
   }
 
   const children = getChildrenIds(color.id)
-  const [parentAId, parentBId] = color.cross ?? []
+  const [parentAId, parentBId] = color.crosses?.[0] ?? []
   const parentA = parentAId ? getColorById(parentAId) : undefined
   const parentB = parentBId ? getColorById(parentBId) : undefined
 

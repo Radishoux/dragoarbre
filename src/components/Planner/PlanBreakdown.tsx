@@ -39,8 +39,9 @@ export function PlanBreakdown({ plan }: PlanBreakdownProps): ReactNode {
   /** The recipe that produces a colour, or the wild-capture note for generation 1. */
   const obtainLabel = (row: PlannedColor): string => {
     const color = getColorById(row.colorId)
-    if (!color?.cross) return t('planner.obtainWild')
-    const [parentAId, parentBId] = color.cross
+    const recipe = color?.crosses?.[0]
+    if (!recipe) return t('planner.obtainWild')
+    const [parentAId, parentBId] = recipe
     const parentA = getColorById(parentAId)
     const parentB = getColorById(parentBId)
     if (!parentA || !parentB) return t('planner.obtainWild')

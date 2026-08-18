@@ -35,28 +35,32 @@ describe('Dragoturkey data integrity', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  test('every cross references existing ids of strictly lower generation', () => {
+  test('every recipe references existing ids of strictly lower generation', () => {
     for (const color of DRAGOTURKEY_COLORS) {
-      if (!color.cross) continue
-      for (const parentId of color.cross) {
-        const parent = getColorById(parentId)
-        expect(parent).toBeDefined()
-        expect(parent!.generation).toBeLessThan(color.generation)
+      for (const recipe of color.crosses ?? []) {
+        for (const parentId of recipe) {
+          const parent = getColorById(parentId)
+          expect(parent).toBeDefined()
+          expect(parent!.generation).toBeLessThan(color.generation)
+        }
       }
     }
   })
 
-  test('generation 1 entries are wild-captured with no cross', () => {
+  test('generation 1 entries are wild-captured with no recipe', () => {
     for (const color of DRAGOTURKEY_COLORS.filter((c) => c.generation === 1)) {
       expect(color.wildCapture).toBe(true)
-      expect(color.cross).toBeUndefined()
+      expect(color.crosses).toBeUndefined()
     }
   })
 
-  test('every non-generation-1 color has exactly one cross of two parents', () => {
+  // Dragoturkeys are the single-recipe species: this is what phase 3's
+  // `crosses` array must keep true for them while Seemyools and Rhineetles
+  // carry up to 12 recipes for one colour.
+  test('every non-generation-1 color has exactly one recipe of two parents', () => {
     for (const color of DRAGOTURKEY_COLORS.filter((c) => c.generation > 1)) {
-      expect(color.cross).toBeDefined()
-      expect(color.cross).toHaveLength(2)
+      expect(color.crosses).toHaveLength(1)
+      expect(color.crosses?.[0]).toHaveLength(2)
       expect(color.wildCapture).toBeUndefined()
     }
   })

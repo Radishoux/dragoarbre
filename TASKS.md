@@ -1,13 +1,13 @@
 # Task Board — Phase 3 (Seemyools and Rhineetles)
 
-Last update: 2026-08-18 15:05
-Current wave: Wave 0 — lead solo on housekeeping and the shared foundations that unblock the fan-out.
+Last update: 2026-08-18 15:40
+Current wave: Wave 0 — lead solo. T1 and T2 landed; T3 (shared foundations) is the last thing gating the 4-agent fan-out.
 
 | ID | Task | Owner | Status | Depends on | Notes |
 |----|------|-------|--------|------------|-------|
 | T1 | Step 0 housekeeping: commit ORCHESTRATION.md + BRIEF-phase-3.md, create this board, ratify the phase 2 deviations in DECISIONS.md | lead | done | - | Ratification entry appended; DECISIONS.md stays append-only |
-| T2 | `cross` → `crosses` migration across types, data, index, planner and UI | lead | todo | T1 | Dragoturkey behaviour must stay byte-identical; existing 61 tests are the regression suite |
-| T3 | Shared foundations: full `StatId` vocabulary (brief §6), FR/EN stat keys, `buildSpecies()` helper for the §3 universal structure rules | lead | todo | T2 | Unblocks T4 and T5 — both new species need the same vocabulary and bicolor derivation |
+| T2 | `cross` → `crosses` migration across types, data, index, planner and UI | lead | done | T1 | Done: 61 tests / 5147 assertions, identical to the pre-migration baseline. Builders keep a single-pair signature so the 66 entries were not rewritten |
+| T3 | Shared foundations: full `StatId` vocabulary (brief §6), FR/EN stat keys, `buildSpecies()` helper for the §3 universal structure rules | lead | in progress | T2 | Unblocks T4 and T5 — both new species need the same vocabulary and bicolor derivation |
 | T4 | Seemyool dataset + integrity tests | agent-seemyool | todo | T3 | Owns `src/data/seemyools.ts`, `src/data/seemyools.test.ts`. 120 colors, 15 monos, recipe counts 6/3/8/8/4/8/5/5/5/5. Transcribe the Azur irregularity faithfully with a flag comment |
 | T5 | Rhineetle dataset + integrity tests | agent-rhineetle | todo | T3 | Owns `src/data/rhineetles.ts`, `src/data/rhineetles.test.ts`. 120 colors, 15 monos, recipe counts 3/3/3/3/12/12/8/2/2/2/2 |
 | T6 | Planner: cheapest-recipe selection (memoized over the DAG) + generic p/k split rule + pair-collision detector | agent-planner | todo | T3 | Owns `src/core/planner.ts`, `src/core/planner.test.ts`. All phase 2 vectors must pass unchanged |

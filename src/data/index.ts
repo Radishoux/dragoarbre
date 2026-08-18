@@ -5,11 +5,29 @@
  */
 import { DRAGOTURKEY_COLORS } from './colors'
 import { DRAGOTURKEY_SPECIALS } from './specials'
-import type { MountColor, SpecialMount } from './types'
+import type { MountColor, Recipe, SpecialMount } from './types'
 
 export type * from './types'
 export { WILD_CAPTURE_INFO } from './wildCapture'
 export { DRAGOTURKEY_COLORS, DRAGOTURKEY_SPECIALS }
+
+/**
+ * Every distinct parent id across all of a color's recipes.
+ *
+ * Phase 1 could read `color.cross` directly because there was only ever one
+ * recipe. With {@link MountColor.crosses} a color can be reachable through
+ * several parent pairs, so ancestry and the reverse index take the union —
+ * a mount is an ancestor if *any* recipe path leads back to it.
+ */
+export function getParentIds(color: MountColor | undefined): readonly string[] {
+  if (!color?.crosses) return []
+  return [...new Set(color.crosses.flat())]
+}
+
+/** Every recipe that produces a color; empty for generation 1. */
+export function getRecipes(id: string): readonly Recipe[] {
+  return getColorById(id)?.crosses ?? []
+}
 
 const COLORS_BY_ID: ReadonlyMap<string, MountColor> = new Map(
   DRAGOTURKEY_COLORS.map((color) => [color.id, color]),
@@ -17,22 +35,24 @@ const COLORS_BY_ID: ReadonlyMap<string, MountColor> = new Map(
 
 /**
  * Reverse index: for each color id, the ids of colors it participates in
- * producing (as either parent). Derived from `cross`, never stored.
+ * producing (as either parent). Derived from `crosses`, never stored.
+ *
+ * A color is listed once per child even when several of that child's recipes
+ * use it, so the "can produce" list in the UI never repeats itself.
  *
  * @example
  * getChildrenIds('almond') // ['almond-ginger', 'almond-golden']
  */
 const CHILDREN_BY_ID: ReadonlyMap<string, readonly string[]> = (() => {
-  const map = new Map<string, string[]>()
+  const map = new Map<string, Set<string>>()
   for (const color of DRAGOTURKEY_COLORS) {
-    if (!color.cross) continue
-    for (const parentId of color.cross) {
-      const siblings = map.get(parentId) ?? []
-      siblings.push(color.id)
+    for (const parentId of getParentIds(color)) {
+      const siblings = map.get(parentId) ?? new Set<string>()
+      siblings.add(color.id)
       map.set(parentId, siblings)
     }
   }
-  return map
+  return new Map([...map].map(([id, children]) => [id, [...children]]))
 })()
 
 /** Looks up a Dragoturkey color by id. */
@@ -47,20 +67,20 @@ export function getChildrenIds(id: string): readonly string[] {
 
 /**
  * The full recursive ancestry of a color, back to its generation-1 roots.
- * Does not include the color itself.
+ * Does not include the color itself. Follows every recipe, not just one, so
+ * for a multi-recipe color this is the union of all its ancestry paths.
  *
  * @example
  * getAncestorIds('ebony') // ['almond-golden', 'golden-ginger', 'almond', 'golden', 'ginger']
  */
 export function getAncestorIds(id: string): string[] {
   const visited = new Set<string>()
-  const stack = [...(getColorById(id)?.cross ?? [])]
+  const stack = [...getParentIds(getColorById(id))]
   while (stack.length > 0) {
     const current = stack.pop()
     if (!current || visited.has(current)) continue
     visited.add(current)
-    const parents = getColorById(current)?.cross
-    if (parents) stack.push(...parents)
+    stack.push(...getParentIds(getColorById(current)))
   }
   return [...visited]
 }

@@ -1,12 +1,12 @@
 /**
  * Core data model for mounts, colors and stat bonuses.
  *
- * These types are intentionally species-agnostic: phase 3 (Seemyools,
- * Rhineetles) reuses them without modification. Only Dragoturkey data is
- * populated in phase 1 (see {@link file://./colors.ts}).
+ * These types are species-agnostic. Phase 3 (Seemyools, Rhineetles) reuses
+ * them, with one model change of its own: `cross` became {@link MountColor.crosses}
+ * because the two new species can produce one color from several parent pairs.
  */
 
-/** The three mount species in Dofus. Only 'dragoturkey' has data in phase 1. */
+/** The three mount species in Dofus. All three carry data as of phase 3. */
 export type SpeciesId = 'dragoturkey' | 'seemyool' | 'rhineetle'
 
 /**
@@ -41,6 +41,15 @@ export interface Bonus {
   unit: '%' | 'flat'
 }
 
+/**
+ * One way to produce a color: the two parent color ids that must be mated.
+ *
+ * The pair is unordered — `['almond', 'golden']` and `['golden', 'almond']`
+ * are the same recipe — but each is stored in one fixed order so ids stay
+ * stable across renders and URLs.
+ */
+export type Recipe = readonly [string, string]
+
 /** A single breedable (or wild-caught) mount color. */
 export interface MountColor {
   /** Stable kebab-case English id, e.g. 'almond-ginger', 'crimson'. */
@@ -54,8 +63,17 @@ export interface MountColor {
   name: Localized
   /** Excludes the species-wide Vitality bonus, which is implicit. */
   bonuses: Bonus[]
-  /** The two parent color ids. Absent for generation 1 (wild capture). */
-  cross?: [string, string]
+  /**
+   * Every recipe that produces this color, each one an unordered pair of
+   * parent color ids. Absent for generation 1, which is wild-caught.
+   *
+   * Dragoturkeys always have exactly one recipe per color. Seemyools and
+   * Rhineetles do not: their odd-generation monocolors can each be produced
+   * by up to 12 different parent pairs, which is why this is a list rather
+   * than the single tuple phase 1 shipped. Consumers must handle any length;
+   * see `docs/DECISIONS.md` for the migration.
+   */
+  crosses?: readonly Recipe[]
   /** True only for generation 1 colors. */
   wildCapture?: boolean
 }
