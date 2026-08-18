@@ -718,3 +718,125 @@ left out. Fetched prose is a lead, not a source.
 
 `src/data/speciesInfo.test.ts` pins all three corrections, including asserting
 the wrong spell name cannot come back.
+
+---
+
+## 2026-08-19 — Reproducteur doubles births; the second baby is assumed independent
+
+**Context:** The Reproducteur capacity gives a second baby from one mating, and
+works on either parent. The sources are explicit about that and silent about
+how the second baby's colour is decided.
+
+**Decision:** Model it as `birthsPerMating`, and treat each baby as an
+independent roll at the target-generation probability, so a mating is worth
+`p * births` successes for the same two parents. Off by default, since it is a
+5% roll from an Animakina and assuming it would quietly halve every plan for
+the players who do not have it. Listed as a fifth entry in the UI's assumptions
+disclosure.
+
+`RecipeChoice.chance` and `PlannedPair.chance` were renamed to
+`successesPerMating` in the same change.
+
+**Consequences:** The rename is the honest part. With the capacity the quantity
+reaches 1.4 at the default settings and 2 at `p = 1` — calling a number above 1
+a "chance" would be wrong, and the field is what the plan divides by, so the
+name is load-bearing rather than cosmetic. Nothing outside `core/` read it.
+
+If the two babies turn out to be linked rather than independent, plans with the
+capacity on are optimistic. That is stated in the disclosure rather than buried:
+the planner's other four assumptions are each recorded the same way, and the
+honest position is that this is the one we have the least source for.
+
+A pleasing structural echo: at `p = 1` the ratio driving recipe cost is
+`f / births`, so cloning (halving `f`) and Reproducteur (doubling `births`)
+reach the same degenerate 0.5 where every recipe ties and depth costs nothing.
+Both are pinned by tests.
+
+---
+
+## 2026-08-19 — Capture nets change trips, not counts; the AoE nets are not modelled
+
+**Context:** Four capture nets exist. The multiplier net (Breeder 100+)
+duplicates whatever it catches. The two reinforced nets take every wild mount
+in a radius-3 zone.
+
+**Decision:** Model the multiplier net only, and model it as a *reporting*
+concern: `BreedingPlan.captureFights` divides each colour's safe count by the
+net's yield and rounds up per colour. The mount counts, the matings and the
+recipe ranking are all untouched. The reinforced nets are absent.
+
+**Consequences:** Rounding per colour rather than over the total is the detail
+that makes the number true — you catch one colour at a time, so a plan wanting
+2 Almond, 1 Golden and 1 Ginger is three trips with a multiplier net, not two.
+The duplicate only pays where two of the same colour are wanted.
+
+Keeping it out of the cost model was deliberate. A uniform divisor on every
+leaf could not move the ranking, so putting it there would buy nothing and
+would place a display choice inside the maths.
+
+The reinforced nets are left out because their yield depends on how many wild
+mounts happen to be in the zone. There is no sourced occupancy figure, and
+inventing one is what `docs/DATA.md`'s sourcing rule forbids — the same reason
+the wild-mount level conflict was left unresolved rather than decided.
+
+---
+
+## 2026-08-19 — The tree turns top-to-bottom, wraps wide generations, and the wheel scrolls
+
+**Context:** Rudy asked for the tree to be more manoeuvrable: turned to run top
+to bottom from generation 1, with the wheel scrolling rather than zooming and
+zoom moved onto a modifier or the buttons.
+
+**Decision:** All three, plus two consequences that only appeared once they were
+built: generations wider than 12 wrap onto sub-rows, and the view opens
+width-fitted at the top with a legible-zoom floor instead of fitting both axes.
+
+**Consequences:** The rotation alone would have made things worse for the two
+species it matters most for. Their widest generation holds 50 colours, so
+turning the tree put them at 8660px wide — about eleven screens, on exactly the
+axis the wheel had just stopped scrolling. Wrapping at 12 brings Seemyool to
+2124 × 1630, which is a column you scroll. The two changes only work together;
+either alone is a regression.
+
+Fitting both axes had to go for the same reason. At full extent the tree sits
+around 22% zoom, where a 12px label is unreadable — a diagram of nothing. The
+view now behaves like a document opening at page one.
+
+The wheel change exposed a live bug rather than causing one. React registers
+`wheel` and `touchmove` as passive listeners, so the existing `preventDefault()`
+had always been failing and logging; zoom still worked, so nothing looked
+broken, but the page had been scrolling behind the tree on every gesture since
+phase 1. Both handlers are now attached natively with `{ passive: false }`.
+
+Binding zoom to Shift as well as Ctrl was Rudy's call and costs the conventional
+Shift-as-horizontal-scroll. Horizontal panning stays available by drag, and a
+trackpad's horizontal swipe still works through `deltaX`.
+
+---
+
+## 2026-08-19 — Mount art is drawn here, not borrowed
+
+**Context:** Rudy asked for representations of the mounts, pointing at community
+pages that show them. Those pages display Ankama's game sprites.
+
+**Decision:** Draw an original silhouette from SVG primitives
+(`MountSilhouette.tsx`), tinted from the existing swatch palette — flat for a
+monocolor, split hard down the middle for a bicolor, matching how the node
+swatch already reads. No sprite is copied, embedded, or hotlinked.
+
+**Consequences:** This is the project's existing policy applied, not a new one:
+`README.md` has said "no Ankama assets, no ripped sprites" since phase 1, and
+the site is public, so hosting or hotlinking someone else's game art is not
+ours to do. Hotlinking would not have helped — it is still redistribution, and
+it would take another site's bandwidth.
+
+One shape serves all three species. It reads as "a mount" rather than as a
+Dragoturkey, which is honest about what it is: a colour swatch with a body, not
+a portrait. Per-species shapes are more drawing, not a different decision.
+
+Wiring it up surfaced a bug that had shipped with phase 3: `palette.ts` was
+keyed by bare Dragoturkey ids, so every prefixed id missed and **240 of the 306
+colours rendered with a `#666` fallback** — every Seemyool and Rhineetle node
+was grey. The lookup now strips the species prefix, and the eight colour names
+only the new species carry were added. The palette stays explicitly decorative
+and is not game data.

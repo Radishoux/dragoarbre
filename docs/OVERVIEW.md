@@ -191,6 +191,19 @@ colors — is modeled as exact math.
   Each new species is declared as its 15 monocolors, with the other 105
   derived — see `docs/DATA.md`.
 
+- **Phase 4 — setup, navigation and art (done):** two more planner levers, both
+  off by default so no shared link changed — the **Reproducteur** capacity
+  (two babies per mating, which roughly halves a plan) and the **multiplier
+  capture net**, which reports capture *trips* alongside mounts. The breeding
+  tree was turned to run top to bottom from generation 1, with the wheel
+  scrolling and Ctrl/Shift zooming, and generations wider than twelve wrapping
+  so the two 120-colour species stay a column you scroll rather than a strip
+  eleven screens wide. Every colour now carries an original mount silhouette
+  tinted with its own swatch. Phase 4 also corrected the species data against
+  two community sources: the Dragoturkey vitality bonus is tiered (300 at level
+  100, 400 at 200), the capture spell is « Apprivoisement de monture », and the
+  two sources disagree on wild-mount level — recorded rather than resolved.
+
 ### Ideas, not commitments
 
 Nothing below is planned or promised; they are the directions that looked
@@ -206,5 +219,5 @@ worth noting while phase 3 was being built.
 - **Time, not just counts.** The gauge and paddock mechanics are documented
   well enough to estimate how long a plan takes in real hours, which is the
   obvious next question after "how many".
-- **Capture nets and the Reproducer capacity**, both of which change the
-  arithmetic materially and neither of which the planner models.
+- **Per-species mount silhouettes.** One shape currently serves all three; it
+  reads as "a mount" rather than as a Dragoturkey, a Muldo or a Volkorne.

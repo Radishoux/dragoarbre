@@ -25,11 +25,17 @@ shopping list of matings and wild captures.
   12 ways to breed the same colour. The tree draws the cheapest by default,
   any node can reveal all of its recipes, and the detail panel always lists
   every one with what it costs in wild captures.
-- **Breeding planner** — pick a target color and a quantity, set your
-  parent level and boosts (Optimakina, Almanax, cloning), and get the
-  success chance per mating plus every mating, mount and wild capture the
-  plan needs, broken down by generation. Plans are shareable: the whole
-  plan lives in the URL.
+- **Breeding planner** — pick a target colour and a quantity, set your
+  parent level and your setup (Optimakina, Almanax, cloning, the Reproducer
+  capacity, which capture net you carry), and get the success chance per
+  mating plus every mating, mount, wild capture and capture trip the plan
+  needs, broken down by generation. Plans are shareable: the whole plan lives
+  in the URL.
+- **A tree you can actually navigate** — generations run down the page from
+  generation 1, the wheel scrolls, Ctrl or Shift with it zooms, and wide
+  generations wrap so the diagram stays a column rather than a strip.
+- **Original mount silhouettes** tinted per colour — drawn here, from SVG
+  primitives. No Ankama assets, no ripped sprites, nothing hotlinked.
 - **Detail panel** — name, generation, the species bonus every mount of that
   species carries, stat bonuses, every recipe (or wild-capture info),
   everything a colour can produce, and a "Plan this mount" shortcut into the

@@ -196,7 +196,9 @@
       "gendersTitle": "Les sexes sont ignorés",
       "genders": "Le modèle suppose que mâles et femelles s’apparient selon les besoins. En pratique le sexe à la naissance et à la capture est aléatoire : gardez une petite marge sur vos captures.",
       "cloningTitle": "Le clonage est amorti",
-      "cloning": "Le facteur 0,5 est l’espérance sur un grand plan. Sur de très petits plans il est légèrement optimiste ; la colonne « sûr » compense en pratique."
+      "cloning": "Le facteur 0,5 est l’espérance sur un grand plan. Sur de très petits plans il est légèrement optimiste ; la colonne « sûr » compense en pratique.",
+      "reproducteurTitle": "Le second bébé est tiré indépendamment",
+      "reproducteur": "Avec la capacité Reproducteur, un accouplement donne deux bébés, et le planificateur traite chacun comme un tirage indépendant à la chance ci-dessus — un accouplement vaut donc deux fois plus de réussites pour les deux mêmes parents. Les sources indiquent que la capacité donne un bébé supplémentaire ; elles ne disent pas comment la couleur de ce bébé est déterminée. Si les deux sont liés, les plans avec cette option activée sont optimistes. Elle est désactivée par défaut."
     },
     "reproducteurLabel": "Capacité Reproducteur",
     "reproducteurHint": "Portée par un des parents, elle donne deux bébés par accouplement au lieu d'un. Tirage rare à l'Animakina — à laisser désactivé sans elle.",

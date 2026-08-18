@@ -196,7 +196,9 @@
       "gendersTitle": "Genders are ignored",
       "genders": "The model assumes males and females pair up as needed. In practice gender at birth and at capture is random, so keep a small buffer on your captures.",
       "cloningTitle": "Cloning is amortised",
-      "cloning": "The 0.5 factor is the large-plan expectation. On very small plans it is slightly optimistic; the safe column compensates in practice."
+      "cloning": "The 0.5 factor is the large-plan expectation. On very small plans it is slightly optimistic; the safe column compensates in practice.",
+      "reproducteurTitle": "The second baby rolls on its own",
+      "reproducteur": "With the Reproducer capacity a mating gives two babies, and the planner treats each as an independent roll at the chance above — so a mating is worth twice as many successes for the same two parents. The sources say the capacity grants an extra baby; they do not say how that baby’s colour is decided. If the two turn out to be linked, plans with it switched on are optimistic. It is off by default."
     },
     "reproducteurLabel": "Reproducer capacity",
     "reproducteurHint": "One parent carries it, so every mating gives two babies instead of one. A rare Animakina roll — leave it off unless you actually have it.",

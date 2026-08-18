@@ -2,9 +2,9 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 /**
- * The four modelling simplifications behind every number the planner shows,
- * in the order they bite: what makes the chance exact, what the estimate
- * ignores, and where it is optimistic rather than conservative.
+ * The modelling simplifications behind every number the planner shows, in the
+ * order they bite: what makes the chance exact, what the estimate ignores, and
+ * where it is optimistic rather than conservative.
  */
 const ASSUMPTIONS = [
   {
@@ -17,6 +17,10 @@ const ASSUMPTIONS = [
   },
   { titleKey: 'planner.assumptions.gendersTitle', bodyKey: 'planner.assumptions.genders' },
   { titleKey: 'planner.assumptions.cloningTitle', bodyKey: 'planner.assumptions.cloning' },
+  {
+    titleKey: 'planner.assumptions.reproducteurTitle',
+    bodyKey: 'planner.assumptions.reproducteur',
+  },
 ] as const
 
 /**

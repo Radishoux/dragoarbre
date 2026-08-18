@@ -61,10 +61,16 @@ route's query string via `src/utils/planUrl.ts`, not in component state.
   derives the other 105. See `docs/DATA.md` for the checklist before adding
   a fourth.
 
+- **Phase 4 (done):** the Reproducteur capacity and the multiplier capture net
+  as planner settings, both off by default; the breeding tree turned top to
+  bottom with wrapping, wheel-scroll and modifier-zoom; and original mount
+  silhouettes. Data corrected against two community sources supplied by Rudy —
+  the tiered Dragoturkey vitality bonus, the capture spell name, and a
+  wild-mount level conflict left documented rather than resolved.
+
 Ideas noted but **not** committed to: per-generation level overrides in the
-planner, a Monte Carlo confidence mode instead of bare expectations, wall-clock
-time estimates from the gauge mechanics, and modelling capture nets and the
-Reproducer capacity. See `docs/OVERVIEW.md`.
+planner, a Monte Carlo confidence mode instead of bare expectations, and
+wall-clock time estimates from the gauge mechanics. See `docs/OVERVIEW.md`.
 
 ## Documentation maintenance rules
 
@@ -115,8 +121,9 @@ Reproducer capacity. See `docs/OVERVIEW.md`.
 - Genetokens (a brief stretch goal) were implemented.
 
 `docs/DECISIONS.md` carries the full reasoning, including an entry for
-each of the planner's four modelling assumptions (clean genealogy, failed
-births not salvaged, genders ignored, cloning amortised).
+each of the planner's modelling assumptions (clean genealogy, failed births
+not salvaged, genders ignored, cloning amortised, and — from phase 4 — the
+Reproducteur second baby rolling independently).
 
 ## Judgment calls made during phase 3
 
@@ -136,5 +143,25 @@ births not salvaged, genders ignored, cloning amortised).
 - **URL-dependent UI state is derived at render, never synchronised in an
   effect** — a stale selection, reveal or stat filter is dropped by a
   `x === expected ? x : null` expression rather than cleared by a `useEffect`.
+
+`docs/DECISIONS.md` carries the full reasoning for each.
+
+## Judgment calls made during phase 4
+
+- **The Reproducteur second baby is assumed to roll independently.** The
+  sources say the capacity grants an extra baby, not how its colour is decided.
+  Plans with it on are optimistic if the two are linked; it is off by default
+  and stated in the UI's assumptions disclosure.
+- **`chance` became `successesPerMating`** on `RecipeChoice`/`PlannedPair`,
+  because with the capacity it exceeds 1 and it is the value the plan divides
+  by. Names that lie about their range are worse than churn.
+- **Capture nets change trips, not counts**, so they stay out of the cost model.
+  The two reinforced AoE nets are not modelled at all — their yield depends on
+  zone occupancy, which no source gives.
+- **The tree's rotation and its wrapping are one change, not two.** Rotating
+  alone put the new species at 8660px wide on the axis the wheel had just
+  stopped scrolling.
+- **Mount art is drawn here.** No Ankama assets, no ripped sprites, no
+  hotlinking — the phase 1 policy, applied.
 
 `docs/DECISIONS.md` carries the full reasoning for each.

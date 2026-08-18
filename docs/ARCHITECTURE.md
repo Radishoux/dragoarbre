@@ -167,13 +167,27 @@ never shifts as filters or selection change.
 ## Tree layout and lineage highlighting
 
 `computeTreeLayout()` (`src/components/BreedingTree/layout.ts`) is a pure
-function: given the color list, it buckets colors by `generation`, lays
-out one fixed-width column per generation, and stacks each generation's
-nodes vertically, centered against the tallest column. It returns a
-`Map<colorId, {x, y}>` plus overall SVG dimensions — no React, no
-side effects, fully unit-testable (currently exercised indirectly through
-the data tests; a dedicated layout test can be added if the layout logic
-grows more complex).
+function: given the colour list, it buckets colours by `generation`, lays out
+one **row** per generation running down the page from generation 1, and spreads
+each generation's colours left to right, centred. It returns a
+`Map<colorId, {x, y}>` plus overall SVG dimensions — no React, no side effects,
+fully unit-testable (currently exercised indirectly through the data tests).
+
+The tree runs down rather than across because that is how it is read and
+scrolled: generation 1 is where a plan starts, and the wheel walks you forward
+through the generations.
+
+**Generations wider than `MAX_PER_ROW` (12) wrap onto sub-rows.** Turning the
+tree without this made the two new species 8660px wide — their widest
+generation holds 50 colours — which is about eleven screens on the one axis the
+wheel does not scroll. Wrapping puts Seemyool at 2124 × 1630 instead: a column
+you scroll, which is the whole point of the orientation.
+
+Wrapping is also why the y cursor accumulates per generation instead of being
+`(generation - 1) * ROW_HEIGHT`: a wrapped generation is several sub-rows tall
+and has to push everything below it down. A useful side effect is that a sparse
+set — the planner lays out only a target's ancestry, which can skip generations
+— now closes up instead of leaving a band of empty canvas.
 
 Lineage highlighting asks `cheapestLineageIds()` from `src/core/planner.ts`,
 not the data layer's `getLineageIds()` — the tree component itself still does
@@ -194,9 +208,27 @@ reveal toggle is on. `PlanTree` passes the pairs the plan actually mates.
 
 Pan/zoom (`usePanZoom.ts`) is a small hook wrapping an SVG `<g
 transform="translate(...) scale(...)">`: pointer-event drag for panning
-(unifies mouse and single-finger touch), wheel for zoom, and a manual
-two-finger touch handler for pinch-zoom, plus explicit +/-/reset buttons
-for precision and non-touch accessibility.
+(unifies mouse and single-finger touch), **wheel for panning**, Ctrl/Shift with
+the wheel for zoom, a manual two-finger handler for pinch-zoom, plus explicit
++/−/reset buttons for precision and non-touch accessibility.
+
+The wheel scrolls rather than zooms. Zoom-on-wheel is the surprising binding on
+a page you also scroll, and once the tree runs top to bottom the wheel doing
+what it does everywhere else is what makes it navigable. Zoom moved to Ctrl or
+Shift, the convention browsers and map UIs already use.
+
+**Wheel and touchmove are registered by hand, not as React props**, because
+React registers both as *passive* listeners — where the `preventDefault()` that
+stops the page scrolling behind the tree is ignored and logs a console error.
+`BreedingTree` attaches them via `addEventListener(..., { passive: false })`.
+This was a live bug before the wheel binding changed: zoom still worked, so
+nothing looked broken, but the page scrolled underneath every gesture.
+
+The opening view fits the **width** and anchors at the top rather than fitting
+both axes. Fitting both put the full tree at about 22% zoom, where a 12px label
+is unreadable; the view now opens like a document, generation 1 at the top, with
+a floor of 0.85 so labels stay legible and the rest of the tree is a scroll
+away.
 
 ## Breeding math module
 
@@ -226,7 +258,8 @@ whole feature is testable without rendering anything.
 ### Settings and the two levers
 
 A `PlannerSettings` object (`parentLevel`, `optimakina`, `almanaxTakeza`,
-`cloning`) applies identically to every mating in a plan. One level is
+`cloning`, `reproducteur`, `captureNet`) applies identically to every mating in
+a plan. One level is
 used for both parents of every pair: per-pair levels would multiply the
 input surface without changing the shape of the answer, since players
 level a whole breeding line together.
@@ -239,6 +272,37 @@ p = min(1, 0.30 + 0.0015 * (levelA + levelB) + (optimakina ? 0.10 : 0) + (takeza
 ```
 
 Expected matings for `q` children is then `M = q / p`.
+
+### Reproducteur and the capture net
+
+Two later levers, both off by default so no existing plan or link changed when
+they landed.
+
+`birthsPerMating(reproducteur)` is how many babies one mating yields: 2 with
+the Reproducteur capacity on either parent, 1 without. A mating still spends
+the same two parents, so the capacity does not change `f` — it doubles the
+*successes*. That makes the quantity the planner divides by no longer a
+probability, which is why `RecipeChoice.successesPerMating` is named what it is
+rather than `chance`: at `p = 0.7` with the capacity it is 1.4, and calling
+that a chance would be a lie.
+
+Each baby is modelled as an **independent** roll at `p`. That is an assumption,
+not a sourced fact — the sources say the capacity grants an extra baby, not how
+its colour is decided — so it is listed in the UI's assumptions disclosure
+alongside the other four.
+
+`captureNet` is the one setting that changes no count at all. A multiplier net
+duplicates whatever it catches, so the plan needs the same *mounts* and fewer
+*trips*: `BreedingPlan.captureFights` divides each colour's safe count by the
+net's yield and rounds up, per colour, because you catch one colour at a time.
+Deliberately a reporting concern and not part of the cost model — a uniform
+divisor on every leaf would not move the ranking anyway, and pretending
+otherwise would put a display choice inside the maths. The two *reinforced*
+nets are not offered: they take every wild mount in a radius-3 zone, so their
+yield depends on how many happen to be standing there, and inventing an
+occupancy figure is exactly what the sourcing rule forbids.
+
+### Cloning
 
 `parentConsumptionFactor(cloning)` is the second lever, `f`. A mating
 spends two fertile parents — one of each recipe color — and leaves them
@@ -261,10 +325,10 @@ farm.
 ```text
 cost(X) = 1                                    if X is wild-caught
 cost(X) = min over recipes (A, B) of
-            (k / p) * f * (cost(A) + cost(B))  otherwise
+            (k / (p * births)) * f * (cost(A) + cost(B))  otherwise
 ```
 
-`k / p` matings per mount, each consuming `f` of both parents. It returns one
+`k / (p * births)` matings per mount, each consuming `f` of both parents. It returns one
 `RecipeRanking` per colour: `options` cheapest-first, `chosen` = `options[0]`,
 and `alternatives` = the rest, which is what the detail panel lists.
 
@@ -278,8 +342,10 @@ is linear in the number of recipes whatever the fan-out.
 being honest. The cost of a path of length `n` is proportional to `(f / p)^n`,
 so when `f / p < 1` (cloning on, high `p`) a *deeper* recipe scores cheaper,
 and when `f / p > 1` a shallower one does. At the extreme — `p = 1` with
-cloning on — `f / p` is exactly 0.5, every colour costs exactly 1.0 captures
-per mount, and *every* recipe ties. That is the same structural consequence of
+cloning on — the ratio is exactly 0.5, every colour costs exactly 1.0 captures
+per mount, and *every* recipe ties. Reproducteur reaches the same place from
+the other direction: at `p = 1` without cloning it doubles `births` instead of
+halving `f`, and the ratio lands on 0.5 again. That is the same structural consequence of
 the amortised-cloning assumption already recorded under "monotonicity holds
 only without cloning", not a defect, and it is pinned by a test.
 
@@ -432,14 +498,14 @@ slider over `PARENT_LEVEL_MIN`..`PARENT_LEVEL_MAX` (1..200), and the three
 assumption toggles. It renders `p` as a percentage with a **Guaranteed**
 badge when it reaches 100%, the expected matings per attempt, summary
 cards, a per-generation breakdown table (color, expected count, safe
-count, matings), and a collapsible note spelling out the four modelling
+count, matings), and a collapsible note spelling out the five modelling
 assumptions.
 
 Plan state lives in the query string of the hash route, decoded and
 encoded by `src/utils/planUrl.ts`:
 
 ```text
-#/planner?species=<speciesId>&target=<colorId>&qty=<1-999>&level=<1-200>&opti=<0|1>&takeza=<0|1>&clone=<0|1>
+#/planner?species=<speciesId>&target=<colorId>&qty=<1-999>&level=<1-200>&opti=<0|1>&takeza=<0|1>&clone=<0|1>&repro=<0|1>&net=<universal|multiplier>
 ```
 
 Every parameter is optional. Phase 3 added `species`, and added it in the way
@@ -511,7 +577,7 @@ and prop-drilling two levels deep doesn't yet justify context or a store.
 Phase 1 left this open with "revisit if phase 2's planner needs state
 shared across more of the tree". It didn't — and the reason is worth
 recording, because the answer went the opposite way from a store. The
-planner's entire state is its target, quantity and four assumptions, and
+planner's entire state is its target, quantity and six assumptions, and
 all of it lives in the **URL query string** (`src/utils/planUrl.ts`),
 read back through the router. `computePlan()` is pure and cheap enough to
 call on every render, so there is nothing to cache and nothing to keep in
