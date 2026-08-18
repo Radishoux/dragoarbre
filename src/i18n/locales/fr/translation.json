@@ -1,0 +1,114 @@
+{
+  "app": {
+    "name": "Dragoarbre",
+    "tagline": "Un arbre de reproduction de montures Dofus, interactif"
+  },
+  "nav": {
+    "tree": "Arbre de reproduction",
+    "howItWorks": "Comment fonctionne l'élevage"
+  },
+  "species": {
+    "dragoturkey": "Dragodindes",
+    "dragoturkeySingular": "Dragodinde",
+    "seemyool": "Muldos",
+    "rhineetle": "Volkornes",
+    "comingSoon": "Bientôt disponible"
+  },
+  "language": {
+    "label": "Langue",
+    "fr": "Français",
+    "en": "English"
+  },
+  "tree": {
+    "title": "Arbre de reproduction des Dragodindes",
+    "generationColumn": "Gén. {{gen}}",
+    "legend": {
+      "title": "Légende",
+      "mono": "Génération monocolore (impaire)",
+      "bicolor": "Génération bicolore (paire)",
+      "selected": "Couleur sélectionnée",
+      "ancestor": "Dans la lignée sélectionnée"
+    },
+    "search": {
+      "placeholder": "Rechercher une couleur…",
+      "noResults": "Aucune couleur ne correspond à votre recherche."
+    },
+    "filters": {
+      "generation": "Génération",
+      "allGenerations": "Toutes les générations",
+      "stat": "Bonus",
+      "allStats": "Tous les bonus",
+      "reset": "Réinitialiser les filtres"
+    },
+    "zoomIn": "Zoomer",
+    "zoomOut": "Dézoomer",
+    "resetView": "Réinitialiser la vue"
+  },
+  "detail": {
+    "title": "Détails",
+    "generation": "Génération {{gen}}",
+    "kindMono": "Monocolore",
+    "kindBicolor": "Bicolore",
+    "bonuses": "Bonus",
+    "obtain": "Comment l'obtenir",
+    "wildCaptureLabel": "Capture sauvage",
+    "crossLabel": "Croisement",
+    "crossWith": "{{parentA}} + {{parentB}}",
+    "produces": "Peut donner",
+    "noProduces": "Cette couleur n'a pas encore été croisée plus loin.",
+    "selectPrompt": "Sélectionnez une couleur dans l'arbre pour voir ses détails.",
+    "close": "Fermer"
+  },
+  "stats": {
+    "vitality": "Vitalité",
+    "initiative": "Initiative",
+    "summons": "Invocations",
+    "heals": "Soins",
+    "agility": "Agilité",
+    "chance": "Chance",
+    "strength": "Force",
+    "intelligence": "Intelligence",
+    "power": "Puissance",
+    "prospecting": "Prospection",
+    "critical": "Critique",
+    "range": "Portée"
+  },
+  "elements": {
+    "neutral": "Neutre",
+    "earth": "Terre",
+    "fire": "Feu",
+    "water": "Eau",
+    "air": "Air"
+  },
+  "special": {
+    "title": "Dragodindes spéciales",
+    "subtitle": "Achetées, non élevées — en dehors de l'arbre de reproduction.",
+    "acquisition": "Acquisition",
+    "resistance": "{{value}}% de résistance {{element}}",
+    "reflectedDamage": "{{value}} dommages renvoyés"
+  },
+  "howItWorks": {
+    "title": "Comment fonctionne l'élevage",
+    "intro": "Cette page résume les règles d'élevage de montures de Dofus 3.5 utilisées dans tout Dragoarbre. Elle est informative pour la phase 1 ; le planificateur de liste de courses de la phase 2 utilisera la formule exacte ci-dessous pour calculer les coûts attendus.",
+    "matingTitle": "Accouplement et jauges",
+    "mating": "L'accouplement nécessite deux montures fécondes de la même espèce et de sexes opposés. Une monture devient féconde quand ses jauges d'endurance, de maturité et d'amour sont toutes au maximum (20 000 chacune) dans un enclos. Chaque accouplement produit exactement un bébé, instantanément — les deux parents deviennent ensuite stériles. Si un parent possède la capacité rare Reproducteur, l'accouplement donne deux bébés.",
+    "cloningTitle": "Clonage",
+    "cloning": "Deux montures stériles (ou fertiles) de la même génération et de la même espèce peuvent être fusionnées en une nouvelle monture fertile — au hasard l'une des deux, en gardant sa couleur, son sexe et sa généalogie, avec les jauges remises à zéro et sa capacité perdue. Un couple reproducteur donne donc au maximum deux montures au total : un bébé, plus un clone récupéré à partir des deux parents dépensés.",
+    "genealogyTitle": "Généalogie et génération cible",
+    "genealogy": "La généalogie d'une monture s'arrête à ses grands-parents — la couleur d'un bébé ne dépend que de ses deux parents et de leurs quatre grands-parents. La génération cible est la génération la plus élevée atteignable à partir des couleurs présentes dans les arbres des deux parents.",
+    "probabilityTitle": "Probabilité de la génération cible",
+    "probability": "Le bébé a une chance de base de 30% d'être de la génération cible, plus 0,15% par niveau de monture cumulé sur les deux parents (deux parents niveau 200 ajoutent 60%), plus 10% si un consommable Optimakina est utilisé, plafonné à 100%. Une fois par an, un bonus Almanax (jour de Takeza) ajoute 20% supplémentaires.",
+    "example": "En pratique : deux parents niveau 200 avec exactement les bonnes couleurs de recette donnent 90% de chance d'obtenir le bébé désiré (100% avec un Optimakina). Le nombre d'accouplements attendu pour un bébé désiré est 1 divisé par cette chance.",
+    "residualTitle": "Si la couleur cible n'est pas unique",
+    "residual": "Pour les Dragodindes, chaque couleur n'a qu'un seul croisement possible : quand la génération cible est atteinte, il n'y a donc qu'une seule couleur possible, sans répartition nécessaire. Si plusieurs couleurs étaient possibles, la probabilité de la génération cible serait répartie entre elles selon le poids généalogique. La probabilité restante est répartie entre les couleurs des parents, des grands-parents et les croisements valides entre les deux arbres — les parents pèsent plus que les grands-parents, les générations élevées sont moins probables, et les couleurs présentes plusieurs fois dans les arbres sont plus probables. Ces poids exacts ne sont pas documentés publiquement, donc Dragoarbre présente cette partie comme une information qualitative uniquement, jamais comme un calcul exact."
+  },
+  "roadmap": {
+    "title": "Feuille de route",
+    "phase2": "La phase 2 ajoutera un planificateur de liste de courses : choisissez une couleur cible et découvrez combien de montures de chaque génération inférieure sont nécessaires, en utilisant les calculs de probabilité ci-dessus.",
+    "phase3": "La phase 3 ajoutera les deux autres espèces de montures, les Muldos et les Volkornes."
+  },
+  "footer": {
+    "disclaimer": "Dragoarbre est un projet de fan non officiel. Dofus est une marque déposée d'Ankama. Dragoarbre n'est affilié à, approuvé par, ou sponsorisé par Ankama.",
+    "dataNote": "Les données reflètent la refonte de l'élevage de Dofus 3.5."
+  }
+}

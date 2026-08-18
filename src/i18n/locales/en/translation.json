@@ -1,0 +1,114 @@
+{
+  "app": {
+    "name": "Dragoarbre",
+    "tagline": "An interactive Dofus mount-breeding tree"
+  },
+  "nav": {
+    "tree": "Breeding tree",
+    "howItWorks": "How breeding works"
+  },
+  "species": {
+    "dragoturkey": "Dragoturkeys",
+    "dragoturkeySingular": "Dragoturkey",
+    "seemyool": "Seemyools",
+    "rhineetle": "Rhineetles",
+    "comingSoon": "Coming soon"
+  },
+  "language": {
+    "label": "Language",
+    "fr": "Français",
+    "en": "English"
+  },
+  "tree": {
+    "title": "Dragoturkey breeding tree",
+    "generationColumn": "Gen. {{gen}}",
+    "legend": {
+      "title": "Legend",
+      "mono": "Mono-color generation (odd)",
+      "bicolor": "Bicolor generation (even)",
+      "selected": "Selected color",
+      "ancestor": "In selected lineage"
+    },
+    "search": {
+      "placeholder": "Search a color by name…",
+      "noResults": "No color matches your search."
+    },
+    "filters": {
+      "generation": "Generation",
+      "allGenerations": "All generations",
+      "stat": "Bonus stat",
+      "allStats": "All stats",
+      "reset": "Reset filters"
+    },
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetView": "Reset view"
+  },
+  "detail": {
+    "title": "Details",
+    "generation": "Generation {{gen}}",
+    "kindMono": "Mono-color",
+    "kindBicolor": "Bicolor",
+    "bonuses": "Bonuses",
+    "obtain": "How to obtain",
+    "wildCaptureLabel": "Wild capture",
+    "crossLabel": "Cross",
+    "crossWith": "{{parentA}} + {{parentB}}",
+    "produces": "Can produce",
+    "noProduces": "This color has not been bred into anything further yet.",
+    "selectPrompt": "Select a color in the tree to see its details.",
+    "close": "Close"
+  },
+  "stats": {
+    "vitality": "Vitality",
+    "initiative": "Initiative",
+    "summons": "Summons",
+    "heals": "Heals",
+    "agility": "Agility",
+    "chance": "Chance",
+    "strength": "Strength",
+    "intelligence": "Intelligence",
+    "power": "Power",
+    "prospecting": "Prospecting",
+    "critical": "Critical",
+    "range": "Range"
+  },
+  "elements": {
+    "neutral": "Neutral",
+    "earth": "Earth",
+    "fire": "Fire",
+    "water": "Water",
+    "air": "Air"
+  },
+  "special": {
+    "title": "Special Dragoturkeys",
+    "subtitle": "Bought, not bred — outside the breeding tree.",
+    "acquisition": "Acquisition",
+    "resistance": "{{value}}% {{element}} resistance",
+    "reflectedDamage": "{{value}} reflected damage"
+  },
+  "howItWorks": {
+    "title": "How breeding works",
+    "intro": "This page summarizes the Dofus 3.5 mount-breeding rules used throughout Dragoarbre. It is informational for phase 1; phase 2's shopping-list planner will use the exact formula below to compute expected costs.",
+    "matingTitle": "Mating and gauges",
+    "mating": "Mating requires two fecund mounts of the same species and opposite genders. A mount becomes fecund once its endurance, maturity and love gauges are all maxed (20 000 each) in a paddock. Each mating produces exactly one baby, instantly — both parents become sterile afterward. If one parent has the rare Reproducer capacity, the mating gives two babies instead.",
+    "cloningTitle": "Cloning",
+    "cloning": "Two sterile (or fertile) mounts of the same generation and species can be merged into one new fertile mount — randomly one of the two, keeping its color, gender and genealogy, with gauges reset and its capacity lost. So a single breeding couple yields at most two mounts total: one baby, plus one clone recovered from the two spent parents.",
+    "genealogyTitle": "Genealogy and target generation",
+    "genealogy": "A mount's genealogy stops at its grandparents — a baby's color depends only on its two parents and their four grandparents. The target generation is the highest generation reachable from the colors present in both parents' trees.",
+    "probabilityTitle": "Target-generation probability",
+    "probability": "The baby has a base 30% chance to be of the target generation, plus 0.15% per mount level summed across both parents (two level-200 parents add 60%), plus 10% if an Optimakina consumable is used, capped at 100%. Once a year, an Almanax bonus (Takeza day) adds a further 20%.",
+    "example": "In practice: two level-200 parents of exactly the right recipe colors give a 90% chance at the desired baby (100% with an Optimakina). The expected number of matings for one desired baby is 1 divided by that chance.",
+    "residualTitle": "If the target color isn't unique",
+    "residual": "For Dragoturkeys, each color has exactly one possible cross, so when the target generation is reached there is only one possible color — no split needed. If several colors were possible, the target-generation probability would be split among them by genealogy weight. The remaining probability is distributed across the parents' and grandparents' colors and valid crosses between the two trees — parents weigh more than grandparents, higher generations are less likely, and colors present multiple times in the trees are more likely. Those exact weights are not publicly documented, so Dragoarbre presents this part as qualitative information only, never as exact math."
+  },
+  "roadmap": {
+    "title": "Roadmap",
+    "phase2": "Phase 2 will add a shopping-list planner: pick a target color and see how many mounts of each lower generation you need, using the probability math above.",
+    "phase3": "Phase 3 will add the two other mount species, Seemyools and Rhineetles."
+  },
+  "footer": {
+    "disclaimer": "Dragoarbre is an unofficial fan project. Dofus is a registered trademark of Ankama. Dragoarbre is not affiliated with, endorsed by, or sponsored by Ankama.",
+    "dataNote": "Data reflects the Dofus 3.5 breeding rework."
+  }
+}
