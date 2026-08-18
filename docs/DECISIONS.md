@@ -378,3 +378,29 @@ particular color; generation 10 is absent from it because a generation-10
 color is never a parent. The figure inherits the clean-genealogy caveat: a
 line bred from mixed ancestry earns less than the plan predicts, so it is
 labelled an estimate in the UI.
+
+---
+
+## 2026-08-18 — Phase 2 deviations ratified by the brief author
+
+**Context:** Phase 2 shipped two judgment calls that contradicted
+`BRIEF-phase-2.md` on its face: the Indigo cloning-on capture vector
+(Almond 0.5, not the brief's 1.0) and the monotonicity property scoped to
+cloning-off only. Both were recorded at the time as deviations, which left
+them reading like open questions a later phase might "fix" back.
+
+**Decision:** `BRIEF-phase-3.md` section 0 closes both. The brief author
+confirms the phase 2 brief contained an arithmetic error of its own: its
+parenthetical `(0.5 + 0.25 + 0.25)` added the 0.5 expected quantity of the
+Amande et Dorée parent — a generation 2 mount — into the Almond *capture*
+count. The shipped 0.5 is correct. Monotonicity is likewise genuinely
+false with cloning on: the 0.5 consumption factor halves upstream demand
+at each recursion level, so a deeper target can require fewer captures of
+a given color than its own parent does. Scoping the assertion to
+cloning-off with a pinned counterexample is the intended behavior.
+
+**Consequences:** Both entries above are now canonical, not provisional.
+The pinned test vectors in `src/core/planner.test.ts` stay exactly as they
+are — a future contributor reading the phase 2 brief and "correcting" the
+code toward it would be reintroducing the brief's own error. Neither is to
+be reverted.
