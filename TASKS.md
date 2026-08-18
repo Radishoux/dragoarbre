@@ -1,4 +1,4 @@
-# Task Board — Phase 3 (Seemyools and Rhineetles)
+# Task Board — Phases 3 and 4
 
 Last update: 2026-08-19 01:30
 Current wave: **Phase 3 complete.** All 11 tasks done. Committed as `1586adf` and pushed to `main`; CI ran tests, lint and build on the runner and deployed to GitHub Pages. Verified live at https://radishoux.github.io/dragoarbre/ — all three species, both languages, and phase 2 links still resolving unchanged.
@@ -112,3 +112,51 @@ Every figure matches what the planner computes locally.
 - **Browser verification caught what tests could not**, three times: a `speciesSearch` that typechecked as a missing identifier only, a missing space in "Cheapest ·3.63", and the stat filter. Green tests are necessary and not sufficient — see the standing note in the user's own memory.
 - **Watch for stale bundles.** The dev server serves the previous build after a restart; two measurements were wrong before a hard reload. Any edge or node count taken without one is suspect.
 - **Keep scratch files outside the project.** A probe written into the repo triggered a Vite hot-reload mid-verification and reset component state, briefly looking like a bug.
+
+---
+
+# Phase 4 — setup, navigation and art
+
+Unplanned: it grew out of two community sources Rudy supplied and two UI
+requests, rather than from a brief. No task board was kept; this is the record.
+
+| Work | Result |
+|---|---|
+| Source verification | Both dofuspourlesnoobs pages re-read verbatim. Corroborated all 11 Dragoturkey monocolor bonuses, the gen-3/5 recipes, the genetoken table and the three formula constants |
+| Data corrections | Tiered Dragoturkey vitality (300@100, 400@200), capture spell « Apprivoisement de monture », 900 PV. `speciesInfo.test.ts` pins all three |
+| Source conflict | Wild-mount level: 62-70 (brief + dedicated page) vs 60 (breeder guide). Left as shipped, documented in `docs/DATA.md`, not resolved by picking a side |
+| Planner | Reproducteur (2 births per mating) and the multiplier capture net (trips, not counts). Both off by default; both optional URL params |
+| Tree | Runs top to bottom, wheel scrolls, Ctrl/Shift zooms, generations wrap at 12 |
+| Art | Original SVG mount silhouettes, tinted per colour |
+
+## Bugs found and fixed along the way
+
+None of these were the work being asked for; all three were shipped defects
+surfaced by doing it.
+
+1. **240 of 306 colours rendered grey.** `palette.ts` was keyed by bare
+   Dragoturkey ids, so every prefixed Seemyool and Rhineetle id fell through to
+   a `#666` fallback. Shipped since phase 3, found while tinting the silhouette.
+2. **The page scrolled behind the tree on every gesture.** React registers
+   `wheel` and `touchmove` as passive, so the existing `preventDefault()` had
+   always been failing and logging. Zoom still worked, so nothing looked broken.
+3. **The wrong capture spell name was in user-facing text** — « Dressage de
+   Monture » where both sources say « Apprivoisement de monture ».
+
+## Process notes
+
+- **The documentation rule was broken once.** Commit `4ad5100` shipped the
+  planner levers, the tree rework and the art with no doc changes; `70e9ef1`
+  is the pass, late. The rule exists because the gap is invisible from the
+  code side — everything was green and the docs simply described a different
+  app.
+- **A fetched page is a lead, not a source.** The first pass over both pages
+  was read through a summarising model and glossed sections it had no room
+  for. Only verbatim re-reads became data; the one figure still resting on the
+  summary (mounts per enclos) was left out.
+- **The dev server serves a stale bundle after a restart.** At least four
+  measurements this phase were wrong until a hard reload — including one that
+  briefly looked like the fifth assumption had failed to deploy.
+- CI actions were bumped past the Node 20 deprecation (checkout v7,
+  configure-pages v6, upload-pages-artifact v5, deploy-pages v5). The
+  annotation every run had been carrying is gone.
