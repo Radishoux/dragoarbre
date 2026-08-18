@@ -13,9 +13,24 @@ interface BreedingTreeProps {
   onSelect: (id: string) => void
   getNodeState: (id: string) => NodeState
   nameFor: (color: MountColor) => string
+  /** Phase 2, optional: colour id -> short badge text (e.g. "2.5"). Ids absent render no badge. */
+  badges?: ReadonlyMap<string, string>
 }
 
-export function BreedingTree({ colors, onSelect, getNodeState, nameFor }: BreedingTreeProps) {
+/**
+ * The pan/zoom breeding-tree SVG: one column per generation, cubic edges along
+ * each `cross`, and one {@link TreeNode} per colour.
+ *
+ * `colors` may be any subset of a species' colours — the planner passes only a
+ * target's ancestry — and `badges` is purely additive decoration on top.
+ */
+export function BreedingTree({
+  colors,
+  onSelect,
+  getNodeState,
+  nameFor,
+  badges,
+}: BreedingTreeProps) {
   const { t } = useTranslation()
   const layout = useMemo(() => computeTreeLayout(colors), [colors])
   const { state, handlers, zoomIn, zoomOut, setView } = usePanZoom({ x: 0, y: 0, scale: 1 })
@@ -107,6 +122,7 @@ export function BreedingTree({ colors, onSelect, getNodeState, nameFor }: Breedi
                 y={position.y}
                 state={getNodeState(color.id)}
                 onSelect={onSelect}
+                badge={badges?.get(color.id)}
               />
             )
           })}

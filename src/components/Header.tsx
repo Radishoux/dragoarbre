@@ -28,6 +28,9 @@ export function Header() {
           <NavLink to="/" end className={navLinkClass}>
             {t('nav.tree')}
           </NavLink>
+          <NavLink to="/planner" className={navLinkClass}>
+            {t('nav.planner')}
+          </NavLink>
           <NavLink to="/how-breeding-works" className={navLinkClass}>
             {t('nav.howItWorks')}
           </NavLink>

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
 import { getChildrenIds, getColorById, type MountColor, WILD_CAPTURE_INFO } from '../data'
 import { useLocalizedName } from '../hooks/useLocalizedName'
 
@@ -45,6 +46,16 @@ export function DetailPanel({ color, onSelect, onClose }: DetailPanelProps) {
         {t('detail.generation', { gen: color.generation })} ·{' '}
         {color.kind === 'mono' ? t('detail.kindMono') : t('detail.kindBicolor')}
       </p>
+
+      {/* Sits above the fold so it stays reachable without scrolling the panel,
+          which gets long for late-generation colours. `target` is the planner's
+          only required search param; everything else falls back to its default. */}
+      <Link
+        to={`/planner?target=${color.id}`}
+        className="block rounded border border-(--color-gold) px-3 py-1.5 text-center text-sm font-medium text-(--color-gold) hover:bg-(--color-panel-raised)"
+      >
+        {t('planner.planThis')}
+      </Link>
 
       <section>
         <h3 className="mb-1 text-xs font-semibold tracking-wide text-(--color-gold) uppercase">

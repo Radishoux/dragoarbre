@@ -155,3 +155,226 @@ without repeating "Dragodinde"/"Dragoturkey" 66 times; the full,
 game-accurate name is still available anywhere it's actually needed. This
 also means the FR/EN word-order rule lives in exactly one place instead of
 being duplicated into the data file.
+
+---
+
+## 2026-08-18 — Planner assumption 1: clean genealogy
+
+**Context:** A mount's target generation depends not only on its parents'
+colors but on the generations present in their family trees (the game
+tracks a pedigree back to the grandparents). A line carrying a stray
+ancestor can make some *other* color reachable as a target-generation
+outcome too, splitting `p` across several possible babies. Modelling that
+would require per-mount pedigree state; the planner only knows color ids.
+
+**Decision:** Assume every mating in a plan uses parents whose colors are
+exactly the recipe and whose trees introduce no competing
+target-generation outcome. The desired baby is then the only
+target-generation possibility, so `planChance()` is exactly the chance of
+getting it.
+
+**Consequences:** `p` becomes one plan-wide number instead of a per-pair
+one, which is what makes an entire plan expressible as a single shopping
+list. The assumption matches how players actually farm — clean pairs are
+bred on purpose, not by accident. A plan executed with mongrel parents
+will underperform its numbers, so the assumption is surfaced in the
+planner's collapsible assumptions note rather than left buried in this
+file.
+
+---
+
+## 2026-08-18 — Planner assumption 2: failed births are not salvaged
+
+**Context:** A failed mating still produces a mount — just not one of the
+target generation. It is usually of a lower generation, and often of a
+color the plan needs elsewhere, so a careful player recycles it instead of
+throwing it away.
+
+**Decision:** The planner discards failures. Only the `q / p` successes
+count toward the plan; by-products are never fed back into the `needed`
+map.
+
+**Consequences:** The estimate is conservative — a patient player who
+recycles will spend fewer captures than the plan states. A number players
+can beat is better than one they can miss. Modelling salvage properly
+would need the residual color distribution, which the "only the
+target-generation formula is exact math" decision above rules out for lack
+of a public source; guessing at it here would smuggle invented numbers
+into the one part of the app that is supposed to be exact.
+
+---
+
+## 2026-08-18 — Planner assumption 3: genders are ignored
+
+**Context:** A mating needs one male and one female. Gender is random both
+at birth and at wild capture, so an unlucky run of one gender stalls a
+breeding line even when the color counts are perfectly correct.
+
+**Decision:** Assume males and females pair up as needed. The planner
+counts mounts, not couples.
+
+**Consequences:** The output stays one number per color instead of a
+distribution over gender splits, at the cost of being slightly optimistic
+in practice. The `safe` column (`Math.ceil(expected)`) absorbs part of the
+slack, and the assumptions note tells players to keep a small buffer on
+captures. Quantifying gender properly would mean simulating runs rather
+than computing an expectation — a much larger change for a planner whose
+main value is being instant and deterministic.
+
+---
+
+## 2026-08-18 — Planner assumption 4: cloning is amortised at 0.5
+
+**Context:** Cloning merges two spent (sterile) parents into one fertile
+mount that is randomly one of the two colors. Across many matings that
+returns on average 0.5 of each parent color; on any *single* mating it
+returns 1 of one color and 0 of the other.
+
+**Decision:** Model cloning as its expectation — a flat factor
+`f = 0.5` applied to both parents of every mating
+(`parentConsumptionFactor()`) — rather than as a random variable.
+
+**Consequences:** The plan stays a closed-form expected value instead of a
+Monte Carlo simulation. It is accurate for large plans and slightly
+optimistic for small ones: a two-mating plan can genuinely draw the wrong
+clone twice. It also produces fractional mount counts (0.25 of a color),
+which is why every `PlannedColor` carries a `safe` ceiling next to its
+`expected` value. And it has one structural consequence surprising enough
+to deserve its own entry below: with cloning on, a deeper color can cost
+*less* than its own parent.
+
+---
+
+## 2026-08-18 — Brief deviation: the Indigo cloning-on vector is inconsistent
+
+**Context:** `BRIEF-phase-2.md` section 5 gives a reference vector for the
+planner: target 1 Indigo, `p = 1`, cloning on → 2 total matings, "captures
+Amande 1.0 expected (0.5 + 0.25 + 0.25), Dorée 0.25, Rousse 0.25". Indigo
+(gen 3) = Almond+Golden × Almond+Ginger; Almond+Golden = Almond × Golden;
+Almond+Ginger = Almond × Ginger.
+
+**Decision:** Implement the brief's normative pseudocode, which gives
+Almond **0.5**, and treat the prose figure as an error. With `f = 0.5`
+compounding at each level, both gen-2 parents are needed 0.5 times, so
+each of *their* parents is needed 0.25 times. Almond sits at exactly two
+leaves of the plan tree → 0.25 + 0.25 = 0.5. The brief's own Golden =
+0.25, Ginger = 0.25 and 2-total-matings figures all confirm the
+compounding model; no consistent model yields (Almond 1.0, Golden 0.25,
+Ginger 0.25, 2 matings) simultaneously. The stray 0.5 inside the brief's
+breakdown is the quantity of a gen-2 parent, not a capture of Almond.
+
+**Consequences:** One worked example in the brief is contradicted; its
+pseudocode, its other two capture figures and its mating total are all
+honoured. `src/core/planner.test.ts` asserts Almond 0.5 with the full
+derivation in a comment, so nobody has to re-derive it from scratch or
+"fix" the code back toward the brief. If a real source ever shows the
+brief's 1.0 was right, the bug would be in the consumption factor, not in
+this example — and that test is where it would surface first.
+
+---
+
+## 2026-08-18 — Brief deviation: monotonicity holds only without cloning
+
+**Context:** The brief lists as a required property test that "deeper
+targets never require fewer resources than their own parents". It is an
+intuitive invariant: a color built *from* another color ought to cost at
+least as much.
+
+**Decision:** Assert the property only for cloning-off configurations, and
+separately pin the cloning-on counterexample as expected behaviour. The
+property is provably false with cloning enabled — for 30 of the 63
+crosses. Verified case: Crimson+Ginger (gen 6) = Crimson (gen 5) × Ginger
+(gen 1) at `p = 1` with cloning on costs 2.5 total matings, while Crimson
+*alone* costs 3. The mating spends a Crimson but cloning refunds half of
+it, and the other parent, Ginger, is a free wild capture — so the gen-6
+color lands cheaper than its own gen-5 parent.
+
+**Consequences:** This is assumption 4 showing up structurally, not a
+defect, so it is pinned rather than patched: `planner.test.ts` asserts the
+exact 2.5 versus 3 so the behaviour can never change silently, and the
+monotonicity property is still enforced across all 66 colors for
+cloning-off settings. A related fact from the same test is worth knowing
+when reading any plan: at `p = 1` with cloning on, total wild captures are
+exactly 1.0 per mount for *every* color, because each mating consumes 0.5
+of each parent color, so the weights sum to 1 at every level. If cloning
+is ever remodelled, that counterexample test is where the change becomes
+visible.
+
+---
+
+## 2026-08-18 — Plan state encoded in the URL instead of a store
+
+**Context:** The planner's state — target color, quantity, parent level
+and three assumption toggles — is shared by the whole planner screen, and
+phase 1's architecture notes had flagged this as the moment to reconsider
+adding a store. It is also exactly the state a player would want to send
+to someone else ("here's the plan for Plum").
+
+**Decision:** Put all of it in the query string of the hash route
+(`#/planner?target=…&qty=…&level=…&opti=…&takeza=…&clone=…`), encoded and
+decoded by `src/utils/planUrl.ts`. Every parameter is optional and falls
+back to `DEFAULT_PLAN_URL_STATE`, and values are validated and clamped on
+the way in, so a bare `#/planner`, a partial link and a hand-edited one
+all resolve to a usable screen.
+
+**Consequences:** Still no state library, now for a better reason than
+"the app is small": the URL *is* the state, so there is no copy to keep in
+sync and no cache to invalidate — `computePlan()` is pure and fast enough
+to run on every render. Plans become bookmarkable, shareable and
+back-button-correct for free, and the "Plan this mount" button in the
+phase 1 detail panel is just a link. The cost is that the state shape is
+now a public contract: renaming a query parameter breaks links people have
+already shared, so parameter names are treated as stable and new options
+must be optional with a default.
+
+---
+
+## 2026-08-18 — Descending-generation sweep instead of literal recursion
+
+**Context:** The brief specifies the plan as a recursion:
+`plan(X, q)` computes `M = q / p` matings and calls itself on each parent
+with `M * f`. Written literally, that re-walks a shared ancestor once per
+distinct path leading to it, which is exponential in the number of
+ancestry paths — and the deep generations of the Dragoturkey DAG have many
+of them.
+
+**Decision:** `computePlan()` evaluates the same recurrence iteratively.
+It seeds a `needed` map with the target quantity and sweeps the color list
+once in **descending generation order**, adding each color's parent
+requirements into the same map as it goes.
+
+**Consequences:** Identical results, linear in the number of colors (66)
+instead of exponential in paths, with no memoisation table to maintain.
+The equivalence rests on an existing data invariant rather than on
+cleverness: every `cross` edge points to a strictly lower generation, a
+rule enforced structurally by `src/data/colors.test.ts`, so a descending
+pass reaches a color only after every color that could consume it has
+already contributed its share. That coupling is the one thing to know
+before touching either file — if the generation invariant is ever relaxed
+(a species in phase 3 with same-generation crosses, say), this sweep stops
+being valid and would need a topological order instead.
+
+---
+
+## 2026-08-18 — Genetokens estimate implemented rather than deferred
+
+**Context:** Genetokens (FR: généton) are a breeding reward: a mating
+awards them when the baby's generation beats every generation present in
+both parents' family trees. `BRIEF-phase-2.md` lists them in section 7 as
+a stretch goal, not a requirement.
+
+**Decision:** Implement the estimate. Under assumption 1 (clean
+genealogy), the award condition holds for *every* successful mating in a
+plan, so the total is a single pass over the recipe pairs the planner has
+already computed: `successes × (value(genA) + value(genB))`, with the
+per-generation values in `GENETOKEN_VALUE_BY_GENERATION`.
+
+**Consequences:** A meaningful number — deep plans are expensive, and this
+shows what they pay back — for one extra field on `BreedingPlan`, one
+summary card, and no new traversal. The value table lives in
+`core/planner.ts` beside the formula that consumes it rather than in
+`src/data/`, since it describes the breeding reward system rather than any
+particular color; generation 10 is absent from it because a generation-10
+color is never a parent. The figure inherits the clean-genealogy caveat: a
+line bred from mixed ancestry earns less than the plan predicts, so it is
+labelled an estimate in the UI.
