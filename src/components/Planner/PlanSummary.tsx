@@ -85,6 +85,15 @@ export function PlanSummary({ plan }: PlanSummaryProps): ReactNode {
             value={format.count(plan.totalCapturesSafe)}
             hint={format.expected(plan.totalCaptures)}
           />
+          {/* Only worth its own card when a net makes it differ from the mount
+              count — otherwise it is the same number said twice. */}
+          {plan.captureFights !== plan.totalCapturesSafe && (
+            <StatCard
+              label={t('planner.summaryCaptureFights')}
+              value={format.count(plan.captureFights)}
+              hint={t('planner.summaryCaptureFightsHint')}
+            />
+          )}
           <StatCard
             label={t('planner.summaryMatings')}
             value={format.expected(plan.totalMatings)}

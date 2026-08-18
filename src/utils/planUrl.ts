@@ -23,7 +23,9 @@
  */
 
 import {
+  type CaptureNet,
   DEFAULT_PLANNER_SETTINGS,
+  MOUNTS_PER_CAPTURE,
   PARENT_LEVEL_MAX,
   PARENT_LEVEL_MIN,
   type PlannerSettings,
@@ -43,6 +45,8 @@ export const PLAN_URL_PARAMS = {
   optimakina: 'opti',
   takeza: 'takeza',
   cloning: 'clone',
+  reproducteur: 'repro',
+  captureNet: 'net',
 } as const
 
 /**
@@ -192,6 +196,17 @@ function readFlag(params: URLSearchParams, name: string, fallback: boolean): boo
  * decodePlanUrl(new URLSearchParams('species=seemyool')).species // 'seemyool'
  * decodePlanUrl(new URLSearchParams('species=dragoturkey')).species // undefined
  */
+/**
+ * Reads the capture-net parameter. An absent or unrecognised value falls back
+ * to the default rather than erroring — a hand-edited link is user input.
+ */
+function readCaptureNet(params: URLSearchParams): CaptureNet {
+  const raw = params.get(PLAN_URL_PARAMS.captureNet)
+  return raw !== null && raw in MOUNTS_PER_CAPTURE
+    ? (raw as CaptureNet)
+    : DEFAULT_PLANNER_SETTINGS.captureNet
+}
+
 export function decodePlanUrl(params: URLSearchParams): PlanUrlState {
   const rawTarget = params.get(PLAN_URL_PARAMS.target)
   const targetId = rawTarget && getColorById(rawTarget) ? rawTarget : null
@@ -226,6 +241,12 @@ export function decodePlanUrl(params: URLSearchParams): PlanUrlState {
         DEFAULT_PLANNER_SETTINGS.almanaxTakeza,
       ),
       cloning: readFlag(params, PLAN_URL_PARAMS.cloning, DEFAULT_PLANNER_SETTINGS.cloning),
+      reproducteur: readFlag(
+        params,
+        PLAN_URL_PARAMS.reproducteur,
+        DEFAULT_PLANNER_SETTINGS.reproducteur,
+      ),
+      captureNet: readCaptureNet(params),
     },
   }
 }
@@ -279,6 +300,12 @@ export function encodePlanUrl(state: PlanUrlState): URLSearchParams {
   }
   if (state.settings.cloning !== DEFAULT_PLANNER_SETTINGS.cloning) {
     params.set(PLAN_URL_PARAMS.cloning, state.settings.cloning ? '1' : '0')
+  }
+  if (state.settings.reproducteur !== DEFAULT_PLANNER_SETTINGS.reproducteur) {
+    params.set(PLAN_URL_PARAMS.reproducteur, state.settings.reproducteur ? '1' : '0')
+  }
+  if (state.settings.captureNet !== DEFAULT_PLANNER_SETTINGS.captureNet) {
+    params.set(PLAN_URL_PARAMS.captureNet, state.settings.captureNet)
   }
 
   return params

@@ -47,6 +47,34 @@ export interface PlannerSettings {
   almanaxTakeza: boolean
   /** Whether spent parents are cloned back, halving parent consumption. */
   cloning: boolean
+  /**
+   * Whether one parent of every mating carries the Reproducteur capacity,
+   * which yields a second baby from the same mating.
+   *
+   * Off by default: it is a 5% roll from an Animakina, so assuming it would
+   * quietly halve every plan for the players who do not have it. It works on
+   * a male as well as a female, so one capacity covers a whole breeding line.
+   */
+  reproducteur: boolean
+  /** Which capture net is used for generation-1 mounts. */
+  captureNet: CaptureNet
+}
+
+/**
+ * The capture nets the planner can model.
+ *
+ * The two *reinforced* nets are deliberately absent. They capture every wild
+ * mount in a radius-3 zone, so their yield depends on how many happen to be
+ * standing there — a number the planner has no basis to assume. Modelling them
+ * would mean inventing an occupancy figure, which `docs/DATA.md`'s sourcing
+ * rule forbids. See `docs/DECISIONS.md`.
+ */
+export type CaptureNet = 'universal' | 'multiplier'
+
+/** Mounts obtained per successful capture, by net. */
+export const MOUNTS_PER_CAPTURE: Readonly<Record<CaptureNet, number>> = {
+  universal: 1,
+  multiplier: 2,
 }
 
 /** Brief-mandated defaults for a fresh planner. */
@@ -55,6 +83,8 @@ export const DEFAULT_PLANNER_SETTINGS: PlannerSettings = {
   optimakina: true,
   almanaxTakeza: false,
   cloning: true,
+  reproducteur: false,
+  captureNet: 'universal',
 }
 
 /** Inclusive bounds for {@link PlannerSettings.parentLevel}. */
@@ -99,8 +129,15 @@ export interface RecipeChoice {
    * this exact parent pair. 1 for every recipe in the current data.
    */
   split: number
-  /** Effective per-mating success probability for this pair: `p / split`. */
-  chance: number
+  /**
+   * Expected target-generation babies from one mating of this pair:
+   * `p / split * births`.
+   *
+   * Not a probability — with the Reproducteur capacity it can exceed 1, since
+   * a mating then yields two babies. Matings for `q` children is
+   * `q / successesPerMating`.
+   */
+  successesPerMating: number
   /**
    * Expected wild captures needed to produce **one** mount of the child through
    * this recipe (with the cheapest recipes used below it). This is the number
@@ -170,8 +207,8 @@ export interface PlannedPair {
   recipeIndex: number
   /** `k` for the split rule; 1 unless this pair also produces other colours. */
   split: number
-  /** Effective per-mating success probability used here: `p / split`. */
-  chance: number
+  /** Expected target-generation babies per mating here: `p / split * births`. */
+  successesPerMating: number
   /**
    * The child's other recipes, cheapest first — what the plan did *not* use.
    * Empty for every Dragoturkey colour, and for any colour with one recipe.
@@ -216,6 +253,14 @@ export interface BreedingPlan {
   totalCaptures: number
   /** Sum of every capture's safe (ceiled) count. */
   totalCapturesSafe: number
+  /**
+   * Capture *fights* needed to bring home {@link totalCapturesSafe} mounts.
+   *
+   * Equal to it with a universal net. A multiplier net duplicates whatever it
+   * catches, so it halves the trips — rounded up per colour, because you catch
+   * one colour at a time and half a fight is a whole fight.
+   */
+  captureFights: number
   /** Expected genetokens earned by executing the plan (brief section 7). */
   genetokens: number
 }
@@ -356,6 +401,27 @@ export function parentConsumptionFactor(cloning: boolean): number {
 }
 
 /**
+ * Babies produced by one mating.
+ *
+ * A mating normally gives exactly one baby, instantly, and leaves both parents
+ * sterile. The Reproducteur capacity on either parent adds a second.
+ *
+ * Each baby is modelled as an independent draw at the target-generation
+ * probability, so two babies double the *expected* successes per mating
+ * without changing what a mating costs in parents. That independence is a
+ * modelling assumption, not a sourced fact — the sources state that the
+ * capacity gives an extra baby, not how the extra baby's colour is rolled.
+ * See `docs/DECISIONS.md`.
+ *
+ * @example
+ * birthsPerMating(true) // 2
+ * birthsPerMating(false) // 1
+ */
+export function birthsPerMating(reproducteur: boolean): number {
+  return reproducteur ? 2 : 1
+}
+
+/**
  * Ranks every recipe of every colour by the cost of its full recursive plan.
  *
  * The cost of a colour is the expected number of **wild captures per mount**,
@@ -410,6 +476,7 @@ export function rankAllRecipes(
 ): Map<string, RecipeRanking> {
   const chance = planChance(settings)
   const factor = parentConsumptionFactor(settings.cloning)
+  const births = birthsPerMating(settings.reproducteur)
   const splits = buildSplitIndex(colors)
 
   /** Untidied costs, so rounding never accumulates through the recursion. */
@@ -425,8 +492,8 @@ export function rankAllRecipes(
       const [parentAId, parentBId] = recipe
       const split =
         splits.get(`${color.generation}|${orderedPair(recipe).join('|')}`)?.childIds.size ?? 1
-      const effectiveChance = chance / split
-      const cost = (factor / effectiveChance) * (costOf(parentAId) + costOf(parentBId))
+      const successesPerMating = (chance / split) * births
+      const cost = (factor / successesPerMating) * (costOf(parentAId) + costOf(parentBId))
       return {
         cost,
         key: orderedPair(recipe),
@@ -435,7 +502,7 @@ export function rankAllRecipes(
           parentAId,
           parentBId,
           split,
-          chance: effectiveChance,
+          successesPerMating,
           captureCost: tidy(cost),
         } satisfies RecipeChoice,
       }
@@ -567,9 +634,10 @@ export function computePlan(
     const recipe = ranking?.chosen
     if (!ranking || !recipe) continue
 
-    // `recipe.chance` is p / k: a pair shared by k colours of this generation
-    // splits the target-generation pool, so it needs k times as many matings.
-    const matings = want / recipe.chance
+    // `successesPerMating` is p / k * births: a pair shared by k colours of
+    // this generation splits the target-generation pool, so it needs k times
+    // as many matings, and Reproducteur's second baby halves them again.
+    const matings = want / recipe.successesPerMating
     matingsByColor.set(color.id, matings)
 
     pairs.push({
@@ -580,7 +648,7 @@ export function computePlan(
       successes: tidy(want),
       recipeIndex: recipe.index,
       split: recipe.split,
-      chance: recipe.chance,
+      successesPerMating: recipe.successesPerMating,
       alternatives: ranking.alternatives,
     })
 
@@ -635,6 +703,10 @@ export function computePlan(
     totalMatings: tidy(totalMatings),
     totalCaptures: tidy(totalCaptures),
     totalCapturesSafe: captures.reduce((sum, entry) => sum + entry.safe, 0),
+    captureFights: captures.reduce(
+      (sum, entry) => sum + Math.ceil(entry.safe / MOUNTS_PER_CAPTURE[settings.captureNet]),
+      0,
+    ),
     genetokens: tidy(genetokens),
   }
 }

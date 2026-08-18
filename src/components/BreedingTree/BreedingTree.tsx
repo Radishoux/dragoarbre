@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MountColor } from '../../data'
 import { computeTreeLayout, NODE_HEIGHT, NODE_WIDTH } from './layout'
@@ -6,6 +6,15 @@ import { TreeNode } from './TreeNode'
 import { usePanZoom } from './usePanZoom'
 
 export type NodeState = 'selected' | 'lineage' | 'dimmed' | 'idle'
+
+/**
+ * Floor for the opening zoom. A node's label is 12px, so this keeps it above
+ * 10 CSS pixels — below that the tree is a diagram of nothing. Fitting a
+ * 19-colour generation into a laptop pane would need about 0.24.
+ */
+const MIN_READABLE_SCALE = 0.85
+/** Gap above generation 1 when the view opens or is reset. */
+const TOP_MARGIN = 12
 
 interface BreedingTreeProps {
   colors: readonly MountColor[]
@@ -44,8 +53,8 @@ function allParents(color: MountColor): readonly string[] {
 }
 
 /**
- * The pan/zoom breeding-tree SVG: one column per generation, cubic edges along
- * each `crosses` edge, and one {@link TreeNode} per colour.
+ * The pan/zoom breeding-tree SVG: one row per generation running down the page,
+ * cubic edges along each `crosses` edge, and one {@link TreeNode} per colour.
  *
  * `colors` may be any subset of a species' colours — the planner passes only a
  * target's ancestry — and `badges` is purely additive decoration on top.
@@ -62,18 +71,43 @@ export function BreedingTree({
 }: BreedingTreeProps) {
   const { t } = useTranslation()
   const layout = useMemo(() => computeTreeLayout(colors), [colors])
-  const { state, handlers, zoomIn, zoomOut, setView } = usePanZoom({ x: 0, y: 0, scale: 1 })
+  const { state, handlers, nativeHandlers, zoomIn, zoomOut, setView } = usePanZoom({
+    x: 0,
+    y: 0,
+    scale: 1,
+  })
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const svgRef = useRef<SVGSVGElement | null>(null)
+
+  // Wheel and touchmove are registered by hand because React registers both as
+  // passive, where the `preventDefault()` that stops the page scrolling behind
+  // the tree is ignored.
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const { onWheel, onTouchMove } = nativeHandlers
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => {
+      svg.removeEventListener('wheel', onWheel)
+      svg.removeEventListener('touchmove', onTouchMove)
+    }
+  }, [nativeHandlers])
 
   const fitToContainer = useCallback(() => {
     const container = containerRef.current
     if (!container) return
     const rect = container.getBoundingClientRect()
     if (rect.width === 0 || rect.height === 0) return
-    const scale = Math.min(rect.width / layout.width, rect.height / layout.height) * 0.94
+    // Fit the *width*, anchored at the top, rather than squeezing the whole
+    // tree into view. A generation-10 row is 19 colours wide, so fitting both
+    // axes lands around 22% zoom, where no label is readable. Since the wheel
+    // now scrolls, the useful starting point is generation 1 at a legible size
+    // with the rest of the tree below you — the way a document opens.
+    const scale = Math.min(1, Math.max(MIN_READABLE_SCALE, (rect.width / layout.width) * 0.98))
     setView({
       x: (rect.width - layout.width * scale) / 2,
-      y: (rect.height - layout.height * scale) / 2,
+      y: TOP_MARGIN,
       scale,
     })
   }, [layout, setView])
@@ -93,12 +127,14 @@ export function BreedingTree({
       for (const parentId of parentsFor(color)) {
         const parentPos = layout.positions.get(parentId)
         if (!parentPos) continue
+        // Bottom edge of the parent to top edge of the child: the tree runs
+        // down the page, so an edge leaves a node's underside.
         lines.push({
           id: `${parentId}->${color.id}`,
-          x1: parentPos.x + NODE_WIDTH,
-          y1: parentPos.y + NODE_HEIGHT / 2,
-          x2: childPos.x,
-          y2: childPos.y + NODE_HEIGHT / 2,
+          x1: parentPos.x + NODE_WIDTH / 2,
+          y1: parentPos.y + NODE_HEIGHT,
+          x2: childPos.x + NODE_WIDTH / 2,
+          y2: childPos.y,
         })
       }
     }
@@ -111,6 +147,7 @@ export function BreedingTree({
       className="relative min-h-[420px] flex-1 overflow-hidden rounded-lg border border-(--color-border) bg-(--color-panel) md:min-h-[560px]"
     >
       <svg
+        ref={svgRef}
         role="img"
         aria-label={t('tree.title')}
         className="h-full w-full touch-none"
@@ -118,9 +155,7 @@ export function BreedingTree({
         onPointerMove={handlers.onPointerMove}
         onPointerUp={handlers.onPointerUp}
         onPointerLeave={handlers.onPointerLeave}
-        onWheel={handlers.onWheel}
         onTouchStart={handlers.onTouchStart}
-        onTouchMove={handlers.onTouchMove}
         onTouchEnd={handlers.onTouchEnd}
       >
         <g transform={`translate(${state.x}, ${state.y}) scale(${state.scale})`}>
@@ -131,7 +166,7 @@ export function BreedingTree({
             return (
               <path
                 key={edge.id}
-                d={`M ${edge.x1} ${edge.y1} C ${edge.x1 + 40} ${edge.y1}, ${edge.x2 - 40} ${edge.y2}, ${edge.x2} ${edge.y2}`}
+                d={`M ${edge.x1} ${edge.y1} C ${edge.x1} ${edge.y1 + 42}, ${edge.x2} ${edge.y2 - 42}, ${edge.x2} ${edge.y2}`}
                 fill="none"
                 stroke={highlighted ? 'var(--color-accent)' : 'var(--color-border)'}
                 strokeWidth={highlighted ? 1.5 : 1}

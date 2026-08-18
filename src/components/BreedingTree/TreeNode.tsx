@@ -17,15 +17,20 @@ const BADGE_MIN_WIDTH = 22
 const BADGE_OVERHANG = 6
 
 /**
- * Reveal-toggle pill geometry. It sits on the node's *bottom* edge, where the
- * count badge (top edge) can never reach it — the two are mutually exclusive
- * in practice (only the planner passes badges, only the tree page passes a
- * reveal toggle) but the geometry does not rely on that.
+ * Reveal-toggle pill geometry. It hangs in the gap *below* the node, pushed
+ * right of centre: the tree runs down the page, so an edge now leaves from the
+ * bottom centre and a centred pill would sit on top of it. The count badge
+ * (top edge) can never reach it either — the two are mutually exclusive in
+ * practice (only the planner passes badges, only the tree page passes a reveal
+ * toggle) but the geometry does not rely on that.
  */
 const REVEAL_HEIGHT = 16
 const REVEAL_FONT_SIZE = 10
 const REVEAL_CHAR_WIDTH = 6
 const REVEAL_PADDING_X = 14
+/** Clear of the bottom-centre edge anchor, and inside the row gap. */
+const REVEAL_OFFSET_X = NODE_WIDTH * 0.42
+const REVEAL_GAP_Y = 6
 
 interface TreeNodeProps {
   color: MountColor
@@ -194,8 +199,8 @@ export function TreeNode({
         >
           <title>{revealLabel}</title>
           <rect
-            x={(NODE_WIDTH - revealWidth) / 2}
-            y={NODE_HEIGHT - REVEAL_HEIGHT / 2}
+            x={REVEAL_OFFSET_X}
+            y={NODE_HEIGHT + REVEAL_GAP_Y}
             width={revealWidth}
             height={REVEAL_HEIGHT}
             rx={REVEAL_HEIGHT / 2}
@@ -204,8 +209,8 @@ export function TreeNode({
             strokeWidth={1.25}
           />
           <text
-            x={NODE_WIDTH / 2}
-            y={NODE_HEIGHT}
+            x={REVEAL_OFFSET_X + revealWidth / 2}
+            y={NODE_HEIGHT + REVEAL_GAP_Y + REVEAL_HEIGHT / 2}
             textAnchor="middle"
             dominantBaseline="middle"
             fontSize={REVEAL_FONT_SIZE}

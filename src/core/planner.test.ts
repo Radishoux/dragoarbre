@@ -13,6 +13,7 @@ import {
 } from '../data'
 import {
   type BreedingPlan,
+  birthsPerMating,
   cheapestLineageIds,
   computePlan,
   DEFAULT_PLANNER_SETTINGS,
@@ -540,14 +541,14 @@ describe('computePlan — the p/k split rule', () => {
     expect(planChance(guaranteed)).toBe(1)
     const ranking = rankRecipes('seemyool-almond', guaranteed, COLLIDING)
     expect(ranking?.chosen?.split).toBe(2)
-    expect(ranking?.chosen?.chance).toBe(0.5)
+    expect(ranking?.chosen?.successesPerMating).toBe(0.5)
   })
 
   test('and doubles the matings the plan asks for', () => {
     const plan = computePlan('seemyool-almond', 1, guaranteed, COLLIDING)
     const pair = plan?.pairs.find((entry) => entry.childId === 'seemyool-almond')
     expect(pair?.split).toBe(2)
-    expect(pair?.chance).toBe(0.5)
+    expect(pair?.successesPerMating).toBe(0.5)
     // One success at p/k = 0.5 costs two matings, not the one p alone buys.
     expect(pair?.matings).toBe(2)
     expect(pair?.successes).toBe(1)
@@ -688,6 +689,113 @@ describe('cheapestLineageIds', () => {
       const plan = computePlan(color.id, 1, settings({ ...GUARANTEED, cloning: false }))
       const planned = new Set((plan?.colors ?? []).map((entry) => entry.colorId))
       expect(new Set(cheapestLineageIds(color.id, noCloning))).toEqual(planned)
+    }
+  })
+})
+
+describe('birthsPerMating', () => {
+  test('Reproducteur turns one baby per mating into two', () => {
+    expect(birthsPerMating(true)).toBe(2)
+    expect(birthsPerMating(false)).toBe(1)
+  })
+
+  test('is off by default, so phase 3 plans are unchanged', () => {
+    expect(DEFAULT_PLANNER_SETTINGS.reproducteur).toBe(false)
+    expect(DEFAULT_PLANNER_SETTINGS.captureNet).toBe('universal')
+  })
+})
+
+describe('computePlan — Reproducteur', () => {
+  const plain = settings({ ...GUARANTEED, cloning: false })
+  const repro = settings({ ...GUARANTEED, cloning: false, reproducteur: true })
+
+  test('doubles the expected successes of every mating', () => {
+    expect(planChance(repro)).toBe(1)
+    const pair = computePlan('indigo', 1, repro)?.pairs.find((p) => p.childId === 'indigo')
+    expect(pair?.successesPerMating).toBe(2)
+    // Half a mating per Indigo, which is an expectation like every other
+    // count here — two babies from one mating, both target-generation at p = 1.
+    expect(pair?.matings).toBe(0.5)
+  })
+
+  test('halves the Indigo reference vector', () => {
+    // Without it: 3 matings, capturing 2 Almond + 1 Golden + 1 Ginger.
+    const before = computePlan('indigo', 1, plain)
+    expect(before?.totalMatings).toBe(3)
+    expect(before?.totalCaptures).toBe(4)
+
+    const after = computePlan('indigo', 1, repro)
+    expect(after?.totalMatings).toBe(1)
+    expect(after?.totalCaptures).toBe(1)
+  })
+
+  test('the safe counts do not halve, because each still rounds up', () => {
+    // 0.5 + 0.25 + 0.25 expected mounts ceil to 1 + 1 + 1.
+    expect(computePlan('indigo', 1, repro)?.totalCapturesSafe).toBe(3)
+  })
+
+  test('never increases any count, for any colour', () => {
+    for (const color of ALL_COLORS) {
+      const before = computePlan(color.id, 1, plain)
+      const after = computePlan(color.id, 1, repro)
+      if (!before || !after) continue
+      expect(after.totalMatings).toBeLessThanOrEqual(before.totalMatings)
+      expect(after.totalCaptures).toBeLessThanOrEqual(before.totalCaptures)
+    }
+  })
+
+  test('at p = 1 without cloning it reaches the same degenerate tie cloning does', () => {
+    // The driver is f / (p * births / k). Cloning halves f; Reproducteur
+    // doubles births. Either way the ratio hits 0.5 and depth stops costing
+    // anything, so every colour costs exactly one capture. Same structural
+    // consequence, recorded in DECISIONS.md under the cloning entry.
+    const ranked = rankAllRecipes(repro)
+    for (const ranking of ranked.values()) expect(ranking.captureCost).toBe(1)
+  })
+})
+
+describe('computePlan — capture nets', () => {
+  const universal = settings({ ...GUARANTEED, cloning: false })
+  const multiplier = settings({ ...GUARANTEED, cloning: false, captureNet: 'multiplier' })
+
+  test('a universal net needs one fight per mount', () => {
+    for (const color of ALL_COLORS) {
+      const plan = computePlan(color.id, 1, universal)
+      if (!plan) continue
+      expect(plan.captureFights).toBe(plan.totalCapturesSafe)
+    }
+  })
+
+  test('a multiplier net halves the trips, rounded up per colour', () => {
+    // Indigo needs 2 Almond + 1 Golden + 1 Ginger. The duplicate only helps
+    // where two of the same colour are wanted: 1 + 1 + 1 = 3 fights, not 2.
+    const plan = computePlan('indigo', 1, multiplier)
+    expect(plan?.totalCapturesSafe).toBe(4)
+    expect(plan?.captureFights).toBe(3)
+    expect(plan?.captures.map((entry) => entry.safe)).toEqual([2, 1, 1])
+  })
+
+  test('it never costs more fights than a universal net, and never more than mounts', () => {
+    for (const color of ALL_COLORS) {
+      const plain = computePlan(color.id, 1, universal)
+      const netted = computePlan(color.id, 1, multiplier)
+      if (!plain || !netted) continue
+      expect(netted.captureFights).toBeLessThanOrEqual(plain.captureFights)
+      expect(netted.captureFights).toBeLessThanOrEqual(netted.totalCapturesSafe)
+    }
+  })
+
+  test('the net changes no mount count and no recipe choice', () => {
+    // It is a reporting concern: it changes how many trips the mounts take,
+    // not how many mounts the plan needs, so it must not move the ranking.
+    for (const color of ALL_COLORS) {
+      const plain = computePlan(color.id, 1, universal)
+      const netted = computePlan(color.id, 1, multiplier)
+      expect(netted?.totalCaptures).toBe(plain?.totalCaptures ?? 0)
+      expect(netted?.totalMatings).toBe(plain?.totalMatings ?? 0)
+      expect(netted?.pairs.map((p) => p.recipeIndex)).toEqual(
+        plain?.pairs.map((p) => p.recipeIndex) ?? [],
+      )
     }
   })
 })

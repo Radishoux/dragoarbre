@@ -197,6 +197,14 @@
       "genders": "The model assumes males and females pair up as needed. In practice gender at birth and at capture is random, so keep a small buffer on your captures.",
       "cloningTitle": "Cloning is amortised",
       "cloning": "The 0.5 factor is the large-plan expectation. On very small plans it is slightly optimistic; the safe column compensates in practice."
-    }
+    },
+    "reproducteurLabel": "Reproducer capacity",
+    "reproducteurHint": "One parent carries it, so every mating gives two babies instead of one. A rare Animakina roll — leave it off unless you actually have it.",
+    "captureNetLabel": "Capture net",
+    "captureNetUniversal": "Universal net (1 mount)",
+    "captureNetMultiplier": "Multiplier net (duplicates, Breeder 100+)",
+    "captureNetHint": "Changes how many capture trips your generation-1 mounts take, not how many you need.",
+    "summaryCaptureFights": "Capture trips",
+    "summaryCaptureFightsHint": "with a multiplier net"
   }
 }

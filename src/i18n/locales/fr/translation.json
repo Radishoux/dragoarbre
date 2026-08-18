@@ -197,6 +197,14 @@
       "genders": "Le modèle suppose que mâles et femelles s’apparient selon les besoins. En pratique le sexe à la naissance et à la capture est aléatoire : gardez une petite marge sur vos captures.",
       "cloningTitle": "Le clonage est amorti",
       "cloning": "Le facteur 0,5 est l’espérance sur un grand plan. Sur de très petits plans il est légèrement optimiste ; la colonne « sûr » compense en pratique."
-    }
+    },
+    "reproducteurLabel": "Capacité Reproducteur",
+    "reproducteurHint": "Portée par un des parents, elle donne deux bébés par accouplement au lieu d'un. Tirage rare à l'Animakina — à laisser désactivé sans elle.",
+    "captureNetLabel": "Filet de capture",
+    "captureNetUniversal": "Filet universel (1 monture)",
+    "captureNetMultiplier": "Filet multiplicateur (duplique, Éleveur 100+)",
+    "captureNetHint": "Change le nombre de sorties de capture pour vos montures de génération 1, pas le nombre nécessaire.",
+    "summaryCaptureFights": "Sorties de capture",
+    "summaryCaptureFightsHint": "avec un filet multiplicateur"
   }
 }

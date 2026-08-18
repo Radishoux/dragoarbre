@@ -100,7 +100,9 @@ export function PlannerControls({
     state.settings.parentLevel === DEFAULT_PLANNER_SETTINGS.parentLevel &&
     state.settings.optimakina === DEFAULT_PLANNER_SETTINGS.optimakina &&
     state.settings.almanaxTakeza === DEFAULT_PLANNER_SETTINGS.almanaxTakeza &&
-    state.settings.cloning === DEFAULT_PLANNER_SETTINGS.cloning
+    state.settings.cloning === DEFAULT_PLANNER_SETTINGS.cloning &&
+    state.settings.reproducteur === DEFAULT_PLANNER_SETTINGS.reproducteur &&
+    state.settings.captureNet === DEFAULT_PLANNER_SETTINGS.captureNet
 
   return (
     <section className="space-y-4 rounded-lg border border-(--color-border) bg-(--color-panel) p-4">
@@ -233,6 +235,34 @@ export function PlannerControls({
             checked={state.settings.cloning}
             onChange={(cloning) => onSettingsChange({ ...state.settings, cloning })}
           />
+          <ToggleField
+            label={t('planner.reproducteurLabel')}
+            hint={t('planner.reproducteurHint')}
+            checked={state.settings.reproducteur}
+            onChange={(reproducteur) => onSettingsChange({ ...state.settings, reproducteur })}
+          />
+          {/* A net is a choice of three, not a flag, so it gets a select even
+              though it sits among the toggles. Only the two whose yield is
+              deterministic are offered — see `CaptureNet`. */}
+          <label className="flex flex-col gap-1 rounded border border-(--color-border) bg-(--color-panel-raised) p-3">
+            <span className="text-sm font-medium text-(--color-text)">
+              {t('planner.captureNetLabel')}
+            </span>
+            <select
+              value={state.settings.captureNet}
+              onChange={(event) =>
+                onSettingsChange({
+                  ...state.settings,
+                  captureNet: event.target.value as PlannerSettings['captureNet'],
+                })
+              }
+              className={fieldClass}
+            >
+              <option value="universal">{t('planner.captureNetUniversal')}</option>
+              <option value="multiplier">{t('planner.captureNetMultiplier')}</option>
+            </select>
+            <span className="text-xs text-(--color-text-muted)">{t('planner.captureNetHint')}</span>
+          </label>
         </div>
       </div>
     </section>

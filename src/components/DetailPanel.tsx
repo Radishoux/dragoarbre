@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import type { RecipeChoice, RecipeRanking } from '../core/planner'
 import { getChildrenIds, getColorById, getSpecies, type MountColor } from '../data'
 import { useLocalizedName } from '../hooks/useLocalizedName'
+import { MountSilhouette } from './MountSilhouette'
 
 interface DetailPanelProps {
   color: MountColor | null
@@ -40,7 +41,7 @@ export function DetailPanel({ color, ranking, onSelect, onClose }: DetailPanelPr
       parentAId: recipe[0],
       parentBId: recipe[1],
       split: 1,
-      chance: 0,
+      successesPerMating: 0,
       captureCost: Number.NaN,
     }))
 
@@ -57,7 +58,10 @@ export function DetailPanel({ color, ranking, onSelect, onClose }: DetailPanelPr
   return (
     <aside className="w-full shrink-0 space-y-4 overflow-y-auto rounded-lg border border-(--color-border) bg-(--color-panel) p-4 md:w-80">
       <div className="flex items-start justify-between gap-2">
-        <h2 className="text-lg font-semibold text-(--color-text)">{fullName(color)}</h2>
+        <div className="flex items-center gap-2">
+          <MountSilhouette colorId={color.id} />
+          <h2 className="text-lg font-semibold text-(--color-text)">{fullName(color)}</h2>
+        </div>
         {onClose && (
           <button
             type="button"

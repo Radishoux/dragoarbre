@@ -35,6 +35,8 @@ describe('decodePlanUrl', () => {
         optimakina: false,
         almanaxTakeza: true,
         cloning: false,
+        reproducteur: false,
+        captureNet: 'universal',
       },
     })
   })
@@ -145,7 +147,14 @@ describe('round trip', () => {
     {
       targetId: 'indigo',
       quantity: 7,
-      settings: { parentLevel: 200, optimakina: false, almanaxTakeza: true, cloning: false },
+      settings: {
+        parentLevel: 200,
+        optimakina: false,
+        almanaxTakeza: true,
+        cloning: false,
+        reproducteur: false,
+        captureNet: 'universal',
+      },
     },
     {
       targetId: 'ebony',
@@ -155,6 +164,8 @@ describe('round trip', () => {
         optimakina: true,
         almanaxTakeza: false,
         cloning: true,
+        reproducteur: false,
+        captureNet: 'universal',
       },
     },
   ]
@@ -196,7 +207,14 @@ describe('buildPlannerHash', () => {
     const state: PlanUrlState = {
       targetId: 'ebony',
       quantity: 3,
-      settings: { parentLevel: 42, optimakina: false, almanaxTakeza: true, cloning: false },
+      settings: {
+        parentLevel: 42,
+        optimakina: false,
+        almanaxTakeza: true,
+        cloning: false,
+        reproducteur: false,
+        captureNet: 'universal',
+      },
     }
     const query = buildPlannerHash(state).split('?')[1] ?? ''
     expect(decodePlanUrl(new URLSearchParams(query))).toEqual(state)
@@ -334,7 +352,14 @@ describe('species in the plan URL', () => {
     {
       targetId: 'rhineetle-golden',
       quantity: 12,
-      settings: { parentLevel: 150, optimakina: false, almanaxTakeza: true, cloning: false },
+      settings: {
+        parentLevel: 150,
+        optimakina: false,
+        almanaxTakeza: true,
+        cloning: false,
+        reproducteur: false,
+        captureNet: 'universal',
+      },
       species: 'rhineetle',
     },
   ]
