@@ -10,10 +10,16 @@
 export type SpeciesId = 'dragoturkey' | 'seemyool' | 'rhineetle'
 
 /**
- * Stat identifiers for mount bonuses, matching the FR/EN stat table in the
- * project brief (section 3).
+ * Stat identifiers for mount bonuses.
+ *
+ * The first group is the phase 1 Dragoturkey vocabulary (`BRIEF-phase-1.md`
+ * section 3); the rest were added in phase 3 for Seemyools and Rhineetles
+ * (`BRIEF-phase-3.md` section 6). Ids are English and stable — they key the
+ * `stats.*` i18n namespace and the tree's stat filter, so renaming one is a
+ * breaking change in two places at once.
  */
 export type StatId =
+  // Phase 1 — Dragoturkeys
   | 'vitality'
   | 'initiative'
   | 'summons'
@@ -26,6 +32,30 @@ export type StatId =
   | 'prospecting'
   | 'critical'
   | 'range'
+  // Phase 3 — action and movement points (the two species common bonuses)
+  | 'actionPoints'
+  | 'movementPoints'
+  // Phase 3 — melee positioning
+  | 'lock'
+  | 'dodge'
+  | 'apParry'
+  | 'mpParry'
+  | 'apReduction'
+  | 'mpReduction'
+  // Phase 3 — critical and pushback
+  | 'criticalDamage'
+  | 'criticalResistance'
+  | 'pushbackDamage'
+  | 'pushbackResistance'
+  // Phase 3 — elemental resistance (percentage) and damage (flat)
+  | 'earthResistance'
+  | 'fireResistance'
+  | 'waterResistance'
+  | 'airResistance'
+  | 'earthDamage'
+  | 'fireDamage'
+  | 'waterDamage'
+  | 'airDamage'
 
 /** A single localized string pair. */
 export interface Localized {
