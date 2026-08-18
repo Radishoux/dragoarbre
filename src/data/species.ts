@@ -55,23 +55,34 @@ export interface MonoSpec {
   recipes?: readonly RecipeSpec[]
 }
 
+/**
+ * One step of a species' common bonus.
+ *
+ * The game grants some species bonuses in stages as the mount levels, so a
+ * single `{ value, fromLevel }` pair cannot express them. Each tier is the
+ * value granted *from* its level, superseding the tier below it.
+ */
+export interface BonusTier {
+  /** Mount level from which {@link bonus} applies. */
+  fromLevel: number
+  bonus: Bonus
+}
+
 /** Everything about a species that is not a per-color fact. */
 export interface SpeciesInfo {
   id: SpeciesId
   /** The species word alone, e.g. "Dragodinde" / "Dragoturkey". */
   singular: Localized
   /**
-   * The bonus every mount of the species carries. Kept out of each color's
-   * `bonuses` — phase 1 established that the species-wide bonus is implicit —
-   * and displayed once by the UI.
+   * The bonus every mount of the species carries, as one entry per level step,
+   * ascending. Kept out of each color's `bonuses` — phase 1 established that
+   * the species-wide bonus is implicit — and displayed once by the UI.
+   *
+   * A list rather than a single value because it is not flat for every
+   * species: a Dragoturkey carries 300 Vitality from level 100 and 400 from
+   * level 200, where a Seemyool's 1 MP has a single step. Never empty.
    */
-  commonBonus: Bonus
-  /**
-   * Level from which {@link commonBonus} is granted. Absent when the source
-   * does not state it: the phase 1 brief never gave one for Dragoturkeys, and
-   * `docs/DATA.md`'s sourcing rule forbids inventing one.
-   */
-  commonBonusFromLevel?: number
+  commonBonusTiers: readonly BonusTier[]
   /** Bilingual wild-capture note, shown on generation 1 colors. */
   wildCapture: Localized
 }

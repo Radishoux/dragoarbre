@@ -13,8 +13,8 @@
     "rhineetle": "Rhineetles",
     "tabsLabel": "Species",
     "commonBonusLabel": "Species bonus",
-    "commonBonus": "Every {{species}} carries +{{bonus}}.",
-    "commonBonusFromLevel": "Every {{species}} carries +{{bonus}}, from level {{level}}.",
+    "commonBonusIntro": "Every {{species}} carries:",
+    "commonBonusTier": "+{{bonus}} from level {{level}}",
     "commonBonusNote": "Granted on top of the colour bonuses below.",
     "emptyTitle": "No data yet",
     "emptyBody": "Dragoarbre has no colour data for this species yet."

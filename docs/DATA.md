@@ -57,8 +57,10 @@ it is left out or flagged — never filled in with a plausible-looking guess.
 
 Sources are `BRIEF-phase-1.md` for Dragoturkeys and `BRIEF-phase-3.md` for
 Seemyools and Rhineetles (both at the repo root), community-documented data
-as of the Dofus 3.5 breeding rework. See the header comment in each data file
-for the exact "last verified" date.
+as of the Dofus 3.5 breeding rework, plus two user-provided community pages
+on dofuspourlesnoobs.com ("Les dragodindes" and "Guide de l'éleveur") used to
+verify and correct the species registry. See the header comment in each data
+file for the exact "last verified" date.
 
 Where a source is internally inconsistent, it is transcribed **as given** and
 flagged in a code comment for someone to re-verify in game. We do not repair
@@ -78,6 +80,46 @@ while transcribing, by comparing against Ambre, whose five second parents run
 Roux → Amande → Ivoire → Turquoise → Prune with no repeat. Both are
 transcribed faithfully, flagged in `seemyools.ts`, and pinned by tests so
 neither can be silently "corrected" later. Both are worth checking in game.
+
+### When two sources disagree
+
+The community pages corroborated the briefs on almost everything checked —
+all 11 Dragoturkey monocolor bonuses to the digit, the generation-3 and -5
+recipes, the capture zones, the genetoken table, and the target-generation
+formula's three constants. Three things came out of the comparison:
+
+**Corrected** (both pages agree, and the shipped value was wrong or missing):
+
+| Value | Was | Now |
+|---|---|---|
+| Dragoturkey common bonus | flat 400 Vitality, no level | 300 from level 100, 400 from level 200 |
+| Capture spell name | « Dressage de Monture » | « Apprivoisement de monture » (1 PA, range 7, no LoS, once per fight) |
+| Dragoturkey maximum HP | not stated | 900 PV |
+
+The spell name is the one that had actually shipped wrong in user-facing text.
+Both pages name it independently, so this is a correction, not a judgment call.
+
+**Left alone, and flagged** — the two pages contradict each other on the level
+of a wild mount:
+
+| Source | Says |
+|---|---|
+| `BRIEF-phase-1.md` (shipped) | level 62 to 70 |
+| "Les dragodindes" | level 62 to 70, and separately that a character needs level 60 to *equip* one |
+| "Guide de l'éleveur" | wild mounts become level 60 monsters |
+
+Two independent sources give 62-70, and the third figure appears on the same
+page as a distinct level-60 requirement, which is a plausible way for the two
+to have been conflated. So the shipped value stands. It is recorded here rather
+than silently resolved: the sourcing rule forbids repairing data by guesswork,
+and that applies to choosing between sources as much as to inventing values.
+Worth settling in game.
+
+**Not used** — a first pass over these pages was read through a summarising
+model, which glossed some sections ("generations 6-10 follow similar
+patterns"). Only claims re-read verbatim from the page became data. Anything
+still resting on that first summary — the per-enclos mount capacity, for
+instance — is deliberately absent rather than transcribed on a paraphrase.
 
 ## How to correct a wrong value
 

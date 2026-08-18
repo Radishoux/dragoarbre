@@ -13,8 +13,8 @@
     "rhineetle": "Volkornes",
     "tabsLabel": "Espèce",
     "commonBonusLabel": "Bonus d'espèce",
-    "commonBonus": "Chaque {{species}} possède +{{bonus}}.",
-    "commonBonusFromLevel": "Chaque {{species}} possède +{{bonus}}, à partir du niveau {{level}}.",
+    "commonBonusIntro": "Chaque {{species}} possède :",
+    "commonBonusTier": "+{{bonus}} à partir du niveau {{level}}",
     "commonBonusNote": "Accordé en plus des bonus de couleur ci-dessous.",
     "emptyTitle": "Pas encore de données",
     "emptyBody": "Dragoarbre n'a pas encore de données de couleur pour cette espèce."

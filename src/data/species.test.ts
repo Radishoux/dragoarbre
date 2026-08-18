@@ -7,8 +7,7 @@ const flat = (stat: Bonus['stat'], value: number): Bonus => ({ stat, value, unit
 const TEST_SPECIES: SpeciesInfo = {
   id: 'seemyool',
   singular: { fr: 'Muldo', en: 'Seemyool' },
-  commonBonus: flat('movementPoints', 1),
-  commonBonusFromLevel: 100,
+  commonBonusTiers: [{ fromLevel: 100, bonus: flat('movementPoints', 1) }],
   wildCapture: { fr: 'Bassin des Muldos', en: 'Seemyool Basin' },
 }
 

@@ -674,3 +674,47 @@ This one is worth recording less for the decision than for how it was found: it
 survived four parallel agents and two green test runs, because every track was
 individually correct and no test covered "the filter offers what the data has".
 The integration pass is where it surfaced, which is what that pass is for.
+
+---
+
+## 2026-08-19 — Species bonuses are a tier list, and a source conflict is kept unresolved
+
+**Context:** Rudy supplied two community pages (dofuspourlesnoobs.com) as
+additional sources. Cross-checking them against the shipped data confirmed
+almost everything — all 11 Dragoturkey monocolor bonuses to the digit, the
+generation-3 and -5 recipes, the genetoken table, and all three constants of
+the target-generation formula — and turned up three discrepancies.
+
+**Decision:**
+
+1. **`SpeciesInfo.commonBonus` + `commonBonusFromLevel` become
+   `commonBonusTiers`**, a list of `{ fromLevel, bonus }`. A Dragoturkey
+   carries 300 Vitality from level 100 and 400 from level 200; the single
+   value plus single level could not express that. Seemyools and Rhineetles
+   have one tier each, so the list is uniform rather than a special case.
+2. **The capture spell is corrected** to « Apprivoisement de monture » from the
+   « Dressage de Monture » that had shipped. Both pages name it independently.
+3. **The wild-mount level conflict is left unresolved and documented.** The
+   dedicated Dragoturkey page and the phase 1 brief both give 62-70; the
+   breeder guide says 60. The shipped value stands.
+
+**Consequences:** The tier list is the honest shape — the game grants some
+species bonuses in steps, and flattening that was losing information rather
+than simplifying. The detail panel lists one line per tier, which reads the
+same for a one-tier species as the old sentence did.
+
+On the conflict: the sourcing rule says data is never repaired by guesswork,
+and picking the more convenient of two disagreeing sources is guesswork wearing
+a better hat. Two independent sources give 62-70 and the odd figure sits on the
+same page as a distinct level-60 *equip* requirement, which is a plausible
+conflation — but plausible is not verified, so it is recorded in `docs/DATA.md`
+for someone to settle in game.
+
+A process note worth keeping: the first pass over these pages was read through
+a summarising model and visibly glossed sections it did not have room for.
+Every claim that became data here was re-read verbatim first, and the one
+figure still resting only on the summary — mounts per enclos — was deliberately
+left out. Fetched prose is a lead, not a source.
+
+`src/data/speciesInfo.test.ts` pins all three corrections, including asserting
+the wrong spell name cannot come back.

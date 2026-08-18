@@ -316,7 +316,7 @@ const synthetic = (stat: 'agility' | 'strength' | 'dodge' | 'chance' | 'lock', v
 const SYNTHETIC_INFO: SpeciesInfo = {
   id: 'seemyool',
   singular: { fr: 'Muldo', en: 'Seemyool' },
-  commonBonus: synthetic('agility', 1),
+  commonBonusTiers: [{ fromLevel: 100, bonus: synthetic('agility', 1) }],
   wildCapture: { fr: 'Bassin des Muldos', en: 'Seemyool Basin' },
 }
 

@@ -46,18 +46,13 @@ export function DetailPanel({ color, ranking, onSelect, onClose }: DetailPanelPr
 
   // Every mount of a species carries its species bonus on top of the colour's
   // own, so it is shown once here rather than folded into each colour's list.
+  // Listed per tier: a Dragoturkey's Vitality grows with level, where the other
+  // two species have a single step.
   const species = getSpecies(color.species)
-  const commonBonus = `${species.commonBonus.value}${
-    species.commonBonus.unit === '%' ? '%' : ''
-  } ${t(`stats.${species.commonBonus.stat}`)}`
-  const commonBonusText =
-    species.commonBonusFromLevel === undefined
-      ? t('species.commonBonus', { species: species.singular[language], bonus: commonBonus })
-      : t('species.commonBonusFromLevel', {
-          species: species.singular[language],
-          bonus: commonBonus,
-          level: species.commonBonusFromLevel,
-        })
+  const commonBonusTiers = species.commonBonusTiers.map((tier) => ({
+    fromLevel: tier.fromLevel,
+    text: `${tier.bonus.value}${tier.bonus.unit === '%' ? '%' : ''} ${t(`stats.${tier.bonus.stat}`)}`,
+  }))
 
   return (
     <aside className="w-full shrink-0 space-y-4 overflow-y-auto rounded-lg border border-(--color-border) bg-(--color-panel) p-4 md:w-80">
@@ -94,8 +89,17 @@ export function DetailPanel({ color, ranking, onSelect, onClose }: DetailPanelPr
         <h3 className="mb-1 text-xs font-semibold tracking-wide text-(--color-gold) uppercase">
           {t('species.commonBonusLabel')}
         </h3>
-        <p className="text-sm">{commonBonusText}</p>
-        <p className="text-xs text-(--color-text-muted)">{t('species.commonBonusNote')}</p>
+        <p className="text-sm">
+          {t('species.commonBonusIntro', { species: species.singular[language] })}
+        </p>
+        <ul className="space-y-0.5 text-sm">
+          {commonBonusTiers.map((tier) => (
+            <li key={tier.fromLevel}>
+              {t('species.commonBonusTier', { bonus: tier.text, level: tier.fromLevel })}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-1 text-xs text-(--color-text-muted)">{t('species.commonBonusNote')}</p>
       </section>
 
       <section>
