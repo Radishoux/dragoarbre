@@ -61,10 +61,23 @@ as of the Dofus 3.5 breeding rework. See the header comment in each data file
 for the exact "last verified" date.
 
 Where a source is internally inconsistent, it is transcribed **as given** and
-flagged in a code comment for someone to re-verify in game. The Seemyool Azur
-recipes are the standing example: the source lists "Prune et Ivoire" twice
-where symmetry with its sibling colors suggests "Prune et Émeraude" in one of
-them. We do not repair data by guesswork, even when the guess looks obvious.
+flagged in a code comment for someone to re-verify in game. We do not repair
+data by guesswork, even when the guess looks obvious.
+
+Two known instances, both in the Seemyool generation-9 recipes, both of the
+same shape — a second parent repeated where the sibling colors cycle through
+five distinct ones:
+
+| Color | Source says | Symmetry suggests |
+|---|---|---|
+| Azur | "Prune et Ivoire" in recipes 3 **and** 5 | "Prune et Émeraude" in recipe 5 |
+| Aigue-marine | "Turquoise et Émeraude" in recipes 4 **and** 5 | "Prune et Émeraude" in recipe 5 |
+
+`BRIEF-phase-3.md` names only the Azur case; the Aigue-marine one was found
+while transcribing, by comparing against Ambre, whose five second parents run
+Roux → Amande → Ivoire → Turquoise → Prune with no repeat. Both are
+transcribed faithfully, flagged in `seemyools.ts`, and pinned by tests so
+neither can be silently "corrected" later. Both are worth checking in game.
 
 ## How to correct a wrong value
 
