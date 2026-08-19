@@ -31,6 +31,10 @@ shopping list of matings and wild captures.
   mating plus every mating, mount, wild capture and capture trip the plan
   needs, broken down by generation. Plans are shareable: the whole plan lives
   in the URL.
+- **Confidence, not just averages** — the planner's counts are expectations;
+  switch confidence on and it simulates the plan 2000 times to tell you what
+  covers it 75%, 90% or 95% of the time. Usually a lot more than the average,
+  which is the useful part.
 - **A tree you can actually navigate** — generations run down the page from
   generation 1, the wheel scrolls, Ctrl or Shift with it zooms, and wide
   generations wrap so the diagram stays a column rather than a strip.

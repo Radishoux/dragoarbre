@@ -40,6 +40,10 @@ each data file's header comment.
   target-split `k` is 1 across the shipped data; `cheapestLineageIds()` gives
   the tree the ancestry the plan actually takes. Its TSDoc is the source of
   truth for the formulas; read it before changing anything numeric.
+- `confidence.ts` — `samplePlanConfidence()` simulates a plan thousands of
+  times and reports the counts that cover it at a chosen percentile, because
+  every figure `computePlan` returns is an expectation. Seeded, so the answer
+  is reproducible and testable.
 
 Nothing in `src/core/` may import from `components/`, `pages/` or `i18n/`.
 The planner UI (`src/pages/PlannerPage.tsx`, `src/components/Planner/`)
@@ -68,9 +72,16 @@ route's query string via `src/utils/planUrl.ts`, not in component state.
   the tiered Dragoturkey vitality bonus, the capture spell name, and a
   wild-mount level conflict left documented rather than resolved.
 
+- **Phase 5 (done):** a correctness pass — the planner's "matings per baby"
+  ignored births, the "How breeding works" page still described the phase 1/2
+  world, search ignored accents, and the tree was unusable on a phone. Unit
+  tests added for the pure modules under `components/`.
+- **Phase 6 (done):** confidence. `src/core/confidence.ts` simulates a plan and
+  reports what covers it 75%, 90% or 95% of the time, beside the expectations.
+
 Ideas noted but **not** committed to: per-generation level overrides in the
-planner, a Monte Carlo confidence mode instead of bare expectations, and
-wall-clock time estimates from the gauge mechanics. See `docs/OVERVIEW.md`.
+planner and wall-clock time estimates from the gauge mechanics. See
+`docs/OVERVIEW.md`.
 
 ## Documentation maintenance rules
 
@@ -186,5 +197,21 @@ Reproducteur second baby rolling independently).
   every total beneath it halved.
 - **Search folds accents**, because most French colour names carry one and
   nobody types them.
+
+`docs/DECISIONS.md` carries the full reasoning for each.
+
+## Judgment calls made during phase 6 (confidence)
+
+- **The sampler simulates matings, not cloning.** The 0.5 parent-consumption
+  factor is already a documented large-plan expectation; re-rolling it per
+  mating would be more precise than the model underneath it.
+- **It is deliberately dearer than the expected figures**, often by 50-100%.
+  A single run cannot spend 0.21 of a mating — every colour it touches costs at
+  least one — where the expectation amortises that away. The UI says so rather
+  than hiding the gap, because the gap is the useful part.
+- **Seeded, not random.** A confidence number that changed between renders
+  would look broken and could not be tested.
+- **The percentile is a display choice, not a plan input**, but it lives in the
+  URL like everything else on the screen so a shared link carries it.
 
 `docs/DECISIONS.md` carries the full reasoning for each.

@@ -204,6 +204,13 @@
     "captureNetMultiplier": "Multiplier net (duplicates, Breeder 100+)",
     "captureNetHint": "Changes how many capture trips your generation-1 mounts take, not how many you need.",
     "summaryCaptureFights": "Capture trips",
-    "summaryCaptureFightsHint": "with a multiplier net"
+    "summaryCaptureFightsHint": "with a multiplier net",
+    "confidenceLabel": "Confidence",
+    "confidenceOff": "Expected values only",
+    "confidenceLevel": "Enough {{level}}% of the time",
+    "confidenceHint": "Simulates the plan 2000 times. Expected values amortise over many plans; this is what one run costs.",
+    "confidenceCaptures": "Captures at {{level}}%",
+    "confidenceMatings": "Matings at {{level}}%",
+    "confidenceNote": "Simulated over {{samples}} runs of this exact plan. Higher than the expected figures because a single run cannot spend a fraction of a mating — every colour it touches costs at least one."
   }
 }

@@ -8,6 +8,7 @@ import {
 import {
   buildPlannerHash,
   buildSpeciesSearch,
+  CONFIDENCE_LEVELS,
   DEFAULT_PLAN_URL_STATE,
   DEFAULT_SPECIES,
   decodePlanUrl,
@@ -369,4 +370,47 @@ describe('species in the plan URL', () => {
       expect(decodePlanUrl(encodePlanUrl(state))).toEqual(state)
     })
   }
+})
+
+describe('confidence in the plan URL', () => {
+  test('absent decodes to no key at all, so earlier state is unchanged', () => {
+    // Same rule as the species parameter: a link written before this existed
+    // must decode to an object deep-equal to what it decoded to then.
+    expect(decodePlanUrl(params('target=indigo'))).toEqual({
+      targetId: 'indigo',
+      quantity: DEFAULT_PLAN_URL_STATE.quantity,
+      settings: DEFAULT_PLANNER_SETTINGS,
+    })
+  })
+
+  test('each offered level round-trips', () => {
+    for (const level of CONFIDENCE_LEVELS) {
+      const state = { ...DEFAULT_PLAN_URL_STATE, targetId: 'indigo', confidence: level }
+      expect(decodePlanUrl(encodePlanUrl(state))).toEqual(state)
+    }
+  })
+
+  test('a level that is not offered is ignored rather than trusted', () => {
+    // Hand-edited URLs reach this; an unsupported percentile must not reach the
+    // sampler, which would silently clamp it to something else.
+    for (const raw of ['1', '99', '0', 'lots', '']) {
+      expect(decodePlanUrl(params(`target=indigo&conf=${raw}`)).confidence).toBeUndefined()
+    }
+  })
+
+  test('a fractional level truncates, the way level and quantity already do', () => {
+    // Not a deliberate feature so much as the established convention: every
+    // numeric parameter here goes through `parseInt`, so `level=200.7` is 200
+    // and `conf=90.5` is 90. Documented rather than special-cased, because
+    // diverging on one parameter would be the surprising choice.
+    expect(decodePlanUrl(params('target=indigo&conf=90.5')).confidence).toBe(90)
+  })
+
+  test('it does not disturb the rest of the state', () => {
+    const decoded = decodePlanUrl(params('target=ebony&qty=4&conf=95&clone=0'))
+    expect(decoded.confidence).toBe(95)
+    expect(decoded.targetId).toBe('ebony')
+    expect(decoded.quantity).toBe(4)
+    expect(decoded.settings.cloning).toBe(false)
+  })
 })

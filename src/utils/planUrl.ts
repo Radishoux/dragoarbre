@@ -47,6 +47,7 @@ export const PLAN_URL_PARAMS = {
   cloning: 'clone',
   reproducteur: 'repro',
   captureNet: 'net',
+  confidence: 'conf',
 } as const
 
 /**
@@ -117,7 +118,19 @@ export interface PlanUrlState {
    * applied in exactly one place.
    */
   species?: SpeciesId
+  /**
+   * Confidence percentile to show alongside the expected figures, as a whole
+   * number (75, 90, 95). Absent means the expectations are shown on their own.
+   *
+   * A display choice rather than a plan input — it changes no count the planner
+   * computes — but it lives here so a shared link carries it like everything
+   * else on the screen.
+   */
+  confidence?: number
 }
+
+/** Confidence levels the planner offers. Anything else in the URL is ignored. */
+export const CONFIDENCE_LEVELS = [75, 90, 95] as const
 
 /** What a planner URL carrying no parameters at all decodes to. */
 export const DEFAULT_PLAN_URL_STATE: PlanUrlState = {
@@ -207,6 +220,16 @@ function readCaptureNet(params: URLSearchParams): CaptureNet {
     : DEFAULT_PLANNER_SETTINGS.captureNet
 }
 
+/**
+ * Reads the confidence level. Spread-omitted rather than set to `undefined`, so
+ * a URL without it decodes to an object deep-equal to what earlier phases
+ * produced — the same rule the species parameter follows.
+ */
+function readConfidence(params: URLSearchParams): { confidence?: number } {
+  const raw = Number.parseInt(params.get(PLAN_URL_PARAMS.confidence) ?? '', 10)
+  return (CONFIDENCE_LEVELS as readonly number[]).includes(raw) ? { confidence: raw } : {}
+}
+
 export function decodePlanUrl(params: URLSearchParams): PlanUrlState {
   const rawTarget = params.get(PLAN_URL_PARAMS.target)
   const targetId = rawTarget && getColorById(rawTarget) ? rawTarget : null
@@ -248,6 +271,7 @@ export function decodePlanUrl(params: URLSearchParams): PlanUrlState {
       ),
       captureNet: readCaptureNet(params),
     },
+    ...readConfidence(params),
   }
 }
 
@@ -306,6 +330,9 @@ export function encodePlanUrl(state: PlanUrlState): URLSearchParams {
   }
   if (state.settings.captureNet !== DEFAULT_PLANNER_SETTINGS.captureNet) {
     params.set(PLAN_URL_PARAMS.captureNet, state.settings.captureNet)
+  }
+  if (state.confidence !== undefined) {
+    params.set(PLAN_URL_PARAMS.confidence, String(state.confidence))
   }
 
   return params

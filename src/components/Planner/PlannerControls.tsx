@@ -8,7 +8,13 @@ import {
 } from '../../core/planner'
 import { getColorsBySpecies, type MountColor } from '../../data'
 import { useLocalizedName } from '../../hooks/useLocalizedName'
-import { type PlanUrlState, planSpecies, QUANTITY_MAX, QUANTITY_MIN } from '../../utils/planUrl'
+import {
+  CONFIDENCE_LEVELS,
+  type PlanUrlState,
+  planSpecies,
+  QUANTITY_MAX,
+  QUANTITY_MIN,
+} from '../../utils/planUrl'
 import { matchesSearch } from '../../utils/search'
 
 interface PlannerControlsProps {
@@ -16,6 +22,7 @@ interface PlannerControlsProps {
   onTargetChange: (targetId: string | null) => void
   onQuantityChange: (quantity: number) => void
   onSettingsChange: (settings: PlannerSettings) => void
+  onConfidenceChange: (confidence: number | undefined) => void
 }
 
 const fieldClass =
@@ -62,6 +69,7 @@ export function PlannerControls({
   onTargetChange,
   onQuantityChange,
   onSettingsChange,
+  onConfidenceChange,
 }: PlannerControlsProps): ReactNode {
   const { t } = useTranslation()
   const { language } = useLocalizedName()
@@ -262,6 +270,31 @@ export function PlannerControls({
               <option value="multiplier">{t('planner.captureNetMultiplier')}</option>
             </select>
             <span className="text-xs text-(--color-text-muted)">{t('planner.captureNetHint')}</span>
+          </label>
+          {/* A display choice, not a plan input — it changes no count, it adds
+              a second one beside them. Grouped here because it is read as part
+              of "how cautious am I being". */}
+          <label className="flex flex-col gap-1 rounded border border-(--color-border) bg-(--color-panel-raised) p-3">
+            <span className="text-sm font-medium text-(--color-text)">
+              {t('planner.confidenceLabel')}
+            </span>
+            <select
+              value={state.confidence ?? ''}
+              onChange={(event) =>
+                onConfidenceChange(
+                  event.target.value ? Number.parseInt(event.target.value, 10) : undefined,
+                )
+              }
+              className={fieldClass}
+            >
+              <option value="">{t('planner.confidenceOff')}</option>
+              {CONFIDENCE_LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {t('planner.confidenceLevel', { level })}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-(--color-text-muted)">{t('planner.confidenceHint')}</span>
           </label>
         </div>
       </div>

@@ -934,3 +934,40 @@ matching rather than a new one.
 Pinned by `search.test.ts` with the exact strings that failed. The tests were
 written first, against the old behaviour, so the fix landed as a visible
 red-to-green diff rather than as an unverifiable claim.
+
+---
+
+## 2026-08-19 — Confidence is simulated, seeded, and honestly dearer
+
+**Context:** Every number the planner shows is an expectation. The `safe`
+column ceils each colour's count, which answers "round up" rather than "how
+sure am I" — and for a deep plan it is not nearly enough: a Rhineetle Plum's
+safe figure is 5 captures where nine runs in ten need 14.
+
+**Decision:** Add `src/core/confidence.ts`, a seeded Monte Carlo over the same
+sweep `computePlan` uses. Offer 75/90/95% in the UI, carried in the URL as an
+optional `conf` parameter. Simulate the mating counts; keep cloning's 0.5
+factor deterministic.
+
+**Consequences:** The figures are much larger than the expectations beside them,
+and that had to be either explained or hidden. It is explained: a single run
+cannot spend 0.21 of a mating, so every colour a plan touches costs at least
+one, where the expectation amortises that fraction away over many plans. Both
+numbers are correct answers to different questions, and a player deciding what
+to catch this evening wants the second one.
+
+Cloning stays deterministic because the 0.5 factor is *already* documented as a
+large-plan expectation. Re-rolling it per mating would give the confidence
+figure a precision the model underneath it does not have.
+
+Seeding is not a detail. An unseeded figure would change on every render — the
+planner recomputes on every slider tick — which would read as a bug and could
+not be asserted in a test. The seed is fixed by default and overridable.
+
+Sampling runs only when asked for: 2000 trials is far dearer than the single
+sweep, and it would otherwise run on every keystroke of the quantity field.
+
+The percentile is a display choice rather than a plan input — it changes no
+count the planner computes — but it lives in the URL anyway, because everything
+else visible on that screen does and a shared link should reproduce what the
+sender saw.

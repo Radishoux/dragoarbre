@@ -7,6 +7,7 @@ import { PlanCaptures } from '../components/Planner/PlanCaptures'
 import { PlannerControls } from '../components/Planner/PlannerControls'
 import { PlanSummary } from '../components/Planner/PlanSummary'
 import { PlanTree } from '../components/Planner/PlanTree'
+import { samplePlanConfidence } from '../core/confidence'
 import { computePlan, type PlannerSettings } from '../core/planner'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { buildPlannerHash, decodePlanUrl, encodePlanUrl, type PlanUrlState } from '../utils/planUrl'
@@ -56,9 +57,30 @@ export function PlannerPage(): ReactNode {
     (settings: PlannerSettings) => commit({ ...state, settings }),
     [commit, state],
   )
+  const handleConfidenceChange = useCallback(
+    (confidence: number | undefined) => {
+      // Spread-omitted when off, so the parameter leaves no trace in the URL —
+      // the same rule the species parameter follows.
+      const { confidence: _dropped, ...rest } = state
+      commit(confidence === undefined ? rest : { ...rest, confidence })
+    },
+    [commit, state],
+  )
 
   const plan = useMemo(
     () => (state.targetId ? computePlan(state.targetId, state.quantity, state.settings) : null),
+    [state],
+  )
+
+  // Only sampled when asked for: 2000 simulated runs is far dearer than the
+  // single sweep `computePlan` does, and it recomputes on every slider tick.
+  const confidence = useMemo(
+    () =>
+      state.targetId && state.confidence !== undefined
+        ? samplePlanConfidence(state.targetId, state.quantity, state.settings, {
+            percentile: state.confidence / 100,
+          })
+        : null,
     [state],
   )
 
@@ -88,6 +110,7 @@ export function PlannerPage(): ReactNode {
         onTargetChange={handleTargetChange}
         onQuantityChange={handleQuantityChange}
         onSettingsChange={handleSettingsChange}
+        onConfidenceChange={handleConfidenceChange}
       />
 
       {plan ? (
@@ -102,7 +125,7 @@ export function PlannerPage(): ReactNode {
             </button>
           </div>
 
-          <PlanSummary plan={plan} />
+          <PlanSummary plan={plan} confidence={confidence} />
           <PlanTree plan={plan} onSelect={handleTargetChange} />
           <PlanCaptures plan={plan} />
           <PlanBreakdown plan={plan} />

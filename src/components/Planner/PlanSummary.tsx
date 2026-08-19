@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { PlanConfidence } from '../../core/confidence'
 import type { BreedingPlan } from '../../core/planner'
 import { usePlanFormat } from './usePlanFormat'
 
 interface PlanSummaryProps {
   plan: BreedingPlan
+  /** Sampled figures to show beside the expectations, or null when not asked for. */
+  confidence?: PlanConfidence | null
 }
 
 /** One headline number with its label and an optional clarifying footnote. */
@@ -26,7 +29,7 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
  * number in the plan is derived from it, so a player who changes one
  * assumption should see immediately what it bought them.
  */
-export function PlanSummary({ plan }: PlanSummaryProps): ReactNode {
+export function PlanSummary({ plan, confidence }: PlanSummaryProps): ReactNode {
   const { t } = useTranslation()
   const format = usePlanFormat()
 
@@ -104,6 +107,28 @@ export function PlanSummary({ plan }: PlanSummaryProps): ReactNode {
             hint={t('planner.summaryGenetokensHint')}
           />
         </div>
+
+        {confidence && (
+          <div className="mt-3 rounded-lg border border-(--color-accent) bg-(--color-panel) p-3">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <StatCard
+                label={t('planner.confidenceCaptures', {
+                  level: Math.round(confidence.percentile * 100),
+                })}
+                value={format.count(confidence.captures)}
+              />
+              <StatCard
+                label={t('planner.confidenceMatings', {
+                  level: Math.round(confidence.percentile * 100),
+                })}
+                value={format.count(confidence.matings)}
+              />
+            </div>
+            <p className="mt-2 text-xs text-(--color-text-muted)">
+              {t('planner.confidenceNote', { samples: confidence.samples })}
+            </p>
+          </div>
+        )}
       </div>
     </section>
   )

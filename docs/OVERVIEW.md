@@ -215,6 +215,14 @@ colors — is modeled as exact math.
   not be zoomed out to fit. All fixed, and the pure modules behind them now have
   unit tests — the layer every shipped bug has come from.
 
+- **Phase 6 — confidence (done):** every number the planner reported was an
+  expectation, and the `safe` column was a crude stand-in for the question
+  players actually ask. A seeded simulation now answers it directly: pick 75%,
+  90% or 95% and the planner reports the captures and matings that cover the
+  plan that often. The figures are markedly higher than the expected ones —
+  for a Rhineetle Plum, 14 captures at 90% against an expected 3.6 — because a
+  single run cannot spend a fraction of a mating. That gap is the point.
+
 ### Ideas, not commitments
 
 Nothing below is planned or promised; they are the directions that looked
@@ -223,10 +231,6 @@ worth noting while phase 3 was being built.
 - **Per-generation level overrides in the planner.** One parent level currently
   applies to every mating. Real lines are levelled unevenly, and early
   generations are often left low.
-- **A Monte Carlo confidence mode.** Every count the planner reports is an
-  expectation. Sampling the plan would turn "3.6 captures" into "you want 5 to
-  be 90% sure", which is closer to the question a player is actually asking —
-  the `safe` column is a crude stand-in for it today.
 - **Time, not just counts.** The gauge and paddock mechanics are documented
   well enough to estimate how long a plan takes in real hours, which is the
   obvious next question after "how many".

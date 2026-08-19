@@ -572,6 +572,40 @@ union walk would lay out 28 colours for a Rhineetle Plum whose plan breeds 11 �
 17 nodes with no badge and, since the plan mates no pair for them, no edges
 either.
 
+## Confidence sampling
+
+`src/core/confidence.ts` answers the question `computePlan()` cannot: not "how
+many on average" but "how many should I actually go and catch". Every figure the
+planner returns is an expectation, and `BreedingPlan.safe` — a per-colour
+`Math.ceil` — is a crude stand-in that answers "round up", not "how sure am I".
+
+`samplePlanConfidence()` runs the plan thousands of times over the same
+descending sweep `computePlan` uses, drawing each baby independently at
+`p / split` and accumulating matings until the colour's demand is met. It
+reports the percentile of total captures and matings, plus a per-colour capture
+figure.
+
+Three things about the model are worth stating plainly:
+
+- **Matings are simulated; cloning is not.** The 0.5 parent-consumption factor
+  is already documented as a large-plan expectation, so it is applied here as
+  the same deterministic factor. Re-rolling it per mating would make the
+  confidence figure more precise than the model underneath it.
+- **It is markedly dearer than the expectation, by design.** A Rhineetle Plum
+  expects 3.6 captures and 8.8 matings; nine runs in ten need 14 and 25. The
+  difference is integrality — a single run cannot spend 0.21 of a mating, so
+  every colour the plan touches costs at least one, where the expectation
+  amortises that away across many plans. The UI states this rather than hiding
+  it, because the gap is the useful content.
+- **It is seeded.** `Math.random()` would make the number flicker between
+  renders and would be untestable; a fixed seed makes the same plan always give
+  the same answer.
+
+Sampling only runs when a confidence level is chosen — 2000 simulated runs is
+far dearer than `computePlan`'s single sweep, and the planner recomputes on
+every slider tick. The level rides in the URL (`conf=75|90|95`) as an optional
+parameter that leaves no trace when off, like `species`.
+
 ## Testing
 
 `bun test` runs 236 tests across 12 files, all pure: data integrity, the

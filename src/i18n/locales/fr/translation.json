@@ -204,6 +204,13 @@
     "captureNetMultiplier": "Filet multiplicateur (duplique, Éleveur 100+)",
     "captureNetHint": "Change le nombre de sorties de capture pour vos montures de génération 1, pas le nombre nécessaire.",
     "summaryCaptureFights": "Sorties de capture",
-    "summaryCaptureFightsHint": "avec un filet multiplicateur"
+    "summaryCaptureFightsHint": "avec un filet multiplicateur",
+    "confidenceLabel": "Confiance",
+    "confidenceOff": "Valeurs attendues seulement",
+    "confidenceLevel": "Suffisant {{level}}% du temps",
+    "confidenceHint": "Simule le plan 2000 fois. Les valeurs attendues s'amortissent sur plusieurs plans ; ceci est le coût d'une seule exécution.",
+    "confidenceCaptures": "Captures à {{level}}%",
+    "confidenceMatings": "Accouplements à {{level}}%",
+    "confidenceNote": "Simulé sur {{samples}} exécutions de ce plan exact. Supérieur aux valeurs attendues car une exécution unique ne peut pas dépenser une fraction d'accouplement — chaque couleur touchée en coûte au moins un."
   }
 }
