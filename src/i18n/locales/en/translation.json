@@ -23,7 +23,7 @@
     "label": "Language"
   },
   "tree": {
-    "title": "Dragoturkey breeding tree",
+    "title": "Breeding tree",
     "generationColumn": "Gen. {{gen}}",
     "legend": {
       "title": "Legend",
@@ -118,23 +118,20 @@
   },
   "howItWorks": {
     "title": "How breeding works",
-    "intro": "This page summarizes the Dofus 3.5 mount-breeding rules used throughout Dragoarbre. It is informational for phase 1; phase 2's shopping-list planner will use the exact formula below to compute expected costs.",
+    "intro": "How Dofus 3.5 mount breeding works, and which parts of it Dragoarbre models. The probability formula below is implemented exactly and drives every number the planner shows; the rest is here as background.",
     "matingTitle": "Mating and gauges",
     "mating": "Mating requires two fecund mounts of the same species and opposite genders. A mount becomes fecund once its endurance, maturity and love gauges are all maxed (20 000 each) in a paddock. Each mating produces exactly one baby, instantly — both parents become sterile afterward. If one parent has the rare Reproducer capacity, the mating gives two babies instead.",
     "cloningTitle": "Cloning",
-    "cloning": "Two sterile (or fertile) mounts of the same generation and species can be merged into one new fertile mount — randomly one of the two, keeping its color, gender and genealogy, with gauges reset and its capacity lost. So a single breeding couple yields at most two mounts total: one baby, plus one clone recovered from the two spent parents.",
+    "cloning": "Two sterile (or fertile) mounts of the same generation and species can be merged into one new fertile mount — randomly one of the two, keeping its color, gender and genealogy, with gauges reset and its capacity lost. So a breeding couple yields at most two mounts: one baby, plus one clone recovered from the two spent parents — or three, if a parent carries the Reproducer capacity and the mating gives two babies.",
     "genealogyTitle": "Genealogy and target generation",
     "genealogy": "A mount's genealogy stops at its grandparents — a baby's color depends only on its two parents and their four grandparents. The target generation is the highest generation reachable from the colors present in both parents' trees.",
     "probabilityTitle": "Target-generation probability",
     "probability": "The baby has a base 30% chance to be of the target generation, plus 0.15% per mount level summed across both parents (two level-200 parents add 60%), plus 10% if an Optimakina consumable is used, capped at 100%. Once a year, an Almanax bonus (Takeza day) adds a further 20%.",
-    "example": "In practice: two level-200 parents of exactly the right recipe colors give a 90% chance at the desired baby (100% with an Optimakina). The expected number of matings for one desired baby is 1 divided by that chance.",
+    "example": "In practice: two level-200 parents of exactly the right recipe colors give a 90% chance at the desired baby (100% with an Optimakina). The expected number of matings for one desired baby is 1 divided by that chance — halved again if a parent carries the Reproducer capacity, since one mating then gives two babies.",
+    "recipesTitle": "Several ways to breed one color",
+    "recipes": "A Dragoturkey color has exactly one recipe. A Seemyool or Rhineetle color can have up to twelve, all producing the same color from different parent pairs. Dragoarbre picks one for you: the recipe whose full family tree costs the fewest wild captures, since captures are the only thing you have to leave the paddock for. Which one wins depends on your assumptions — cloning and the Reproducer both make deeper recipes relatively cheaper — so the choice shifts as you change the settings. The detail panel always lists every recipe with its price, and any node in the tree can reveal all of its own.",
     "residualTitle": "If the target color isn't unique",
-    "residual": "For Dragoturkeys, each color has exactly one possible cross, so when the target generation is reached there is only one possible color — no split needed. If several colors were possible, the target-generation probability would be split among them by genealogy weight. The remaining probability is distributed across the parents' and grandparents' colors and valid crosses between the two trees — parents weigh more than grandparents, higher generations are less likely, and colors present multiple times in the trees are more likely. Those exact weights are not publicly documented, so Dragoarbre presents this part as qualitative information only, never as exact math."
-  },
-  "roadmap": {
-    "title": "Roadmap",
-    "phase2": "Phase 2 will add a shopping-list planner: pick a target color and see how many mounts of each lower generation you need, using the probability math above.",
-    "phase3": "Phase 3 will add the two other mount species, Seemyools and Rhineetles."
+    "residual": "When the target generation is reached, the color you get is decided among the colors that generation allows. If one exact parent pair could produce several colors of that generation, the probability is split between them and you need proportionally more matings. In the data Dragoarbre ships, no pair does — a test asserts it — so reaching the target generation means getting the color you aimed for. The remaining probability is distributed across the parents' and grandparents' colors and valid crosses between the two trees: parents weigh more than grandparents, higher generations are less likely, and colors appearing several times in the trees are more likely. Those exact weights are not publicly documented, so Dragoarbre presents this part as qualitative information only, never as exact math."
   },
   "footer": {
     "disclaimer": "Dragoarbre is an unofficial fan project. Dofus is a registered trademark of Ankama. Dragoarbre is not affiliated with, endorsed by, or sponsored by Ankama.",
@@ -188,7 +185,7 @@
     "copyLinkDone": "Link copied",
     "assumptions": {
       "title": "What this model assumes",
-      "intro": "Four deliberate simplifications. They are what make a single number possible — read them before trusting the counts.",
+      "intro": "Five deliberate simplifications. They are what make a single number possible — read them before trusting the counts.",
       "cleanGenealogyTitle": "Clean genealogy",
       "cleanGenealogy": "Every mating uses parents whose own colours are exactly the recipe and whose family trees introduce no competing target-generation outcome. The desired baby is then the only target-generation possibility, so its chance is exactly the number above. This matches how players actually farm a line.",
       "failedBirthsTitle": "Failed births are not salvaged",

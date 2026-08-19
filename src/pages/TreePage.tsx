@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import { BreedingTree, type NodeState } from '../components/BreedingTree/BreedingTree'
@@ -100,6 +100,24 @@ export function TreePage() {
     [activeRevealedId, rankings],
   )
 
+  // On a phone the panel stacks *below* a 420px-tall tree, so a tap updates
+  // something entirely off-screen and reads as nothing happening. Bring it into
+  // view — but only when stacked; on desktop it already sits alongside and
+  // scrolling would yank the page for no reason.
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!activeId) return
+    if (window.matchMedia('(min-width: 768px)').matches) return
+    // `start`, not `nearest`: the panel's top edge sits a few pixels inside a
+    // phone viewport, so `nearest` judges it visible and does nothing while the
+    // content itself is entirely below the fold.
+    //
+    // `auto`, not `smooth`: smooth scrolling is a no-op in some engines, and an
+    // instant jump is the better interaction here anyway — you tapped a colour
+    // to read about it, so arriving immediately beats a 300ms glide.
+    panelRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' })
+  }, [activeId])
+
   const handleToggleReveal = useCallback(
     (id: string) => setRevealedId((current) => (current === id ? null : id)),
     [],
@@ -143,12 +161,14 @@ export function TreePage() {
           revealedId={activeRevealedId}
           onToggleReveal={handleToggleReveal}
         />
-        <DetailPanel
-          color={selectedColor}
-          ranking={selectedColor ? (rankings.get(selectedColor.id) ?? null) : null}
-          onSelect={setSelectedId}
-          onClose={activeId ? () => setSelectedId(null) : undefined}
-        />
+        <div ref={panelRef} className="flex md:w-80 md:shrink-0">
+          <DetailPanel
+            color={selectedColor}
+            ranking={selectedColor ? (rankings.get(selectedColor.id) ?? null) : null}
+            onSelect={setSelectedId}
+            onClose={activeId ? () => setSelectedId(null) : undefined}
+          />
+        </div>
       </div>
       {/* The special mounts are Dragoturkey-only game content; the other two
           species have no equivalent, so the section is not just empty there. */}

@@ -50,8 +50,8 @@ function ToggleField({
 }
 
 /**
- * Every planner input: the target colour, the quantity and the four plan-wide
- * assumptions.
+ * Every planner input: the target colour, the quantity and the six plan-wide
+ * settings.
  *
  * The component is fully controlled — it owns no plan state, only the
  * throwaway search text used to narrow the target list. That keeps the URL the

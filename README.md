@@ -41,7 +41,8 @@ shopping list of matings and wild captures.
   everything a colour can produce, and a "Plan this mount" shortcut into the
   planner.
 - **Bilingual search** — matches FR or EN names regardless of the active
-  UI language, plus filters by generation and by bonus stat.
+  UI language and ignores accents, so "ebene" finds Ébène. Plus filters by
+  generation and by bonus stat, offered per species.
 - **FR/EN language switcher**, auto-detected from the browser, persisted
   across visits.
 - **Special mounts section** for the two non-breedable Dragoturkeys.

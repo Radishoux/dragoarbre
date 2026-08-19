@@ -23,7 +23,7 @@
     "label": "Langue"
   },
   "tree": {
-    "title": "Arbre de reproduction des Dragodindes",
+    "title": "Arbre de reproduction",
     "generationColumn": "Gén. {{gen}}",
     "legend": {
       "title": "Légende",
@@ -118,23 +118,20 @@
   },
   "howItWorks": {
     "title": "Comment fonctionne l'élevage",
-    "intro": "Cette page résume les règles d'élevage de montures de Dofus 3.5 utilisées dans tout Dragoarbre. Elle est informative pour la phase 1 ; le planificateur de liste de courses de la phase 2 utilisera la formule exacte ci-dessous pour calculer les coûts attendus.",
+    "intro": "Le fonctionnement de l'élevage de montures dans Dofus 3.5, et ce que Dragoarbre en modélise. La formule de probabilité ci-dessous est implémentée exactement et détermine tous les chiffres du planificateur ; le reste est là comme contexte.",
     "matingTitle": "Accouplement et jauges",
     "mating": "L'accouplement nécessite deux montures fécondes de la même espèce et de sexes opposés. Une monture devient féconde quand ses jauges d'endurance, de maturité et d'amour sont toutes au maximum (20 000 chacune) dans un enclos. Chaque accouplement produit exactement un bébé, instantanément — les deux parents deviennent ensuite stériles. Si un parent possède la capacité rare Reproducteur, l'accouplement donne deux bébés.",
     "cloningTitle": "Clonage",
-    "cloning": "Deux montures stériles (ou fertiles) de la même génération et de la même espèce peuvent être fusionnées en une nouvelle monture fertile — au hasard l'une des deux, en gardant sa couleur, son sexe et sa généalogie, avec les jauges remises à zéro et sa capacité perdue. Un couple reproducteur donne donc au maximum deux montures au total : un bébé, plus un clone récupéré à partir des deux parents dépensés.",
+    "cloning": "Deux montures stériles (ou fertiles) de la même génération et de la même espèce peuvent être fusionnées en une nouvelle monture fertile — au hasard l'une des deux, en gardant sa couleur, son sexe et sa généalogie, avec les jauges remises à zéro et sa capacité perdue. Un couple reproducteur donne donc au maximum deux montures : un bébé, plus un clone récupéré à partir des deux parents dépensés — ou trois, si un parent porte la capacité Reproducteur et que l'accouplement donne deux bébés.",
     "genealogyTitle": "Généalogie et génération cible",
     "genealogy": "La généalogie d'une monture s'arrête à ses grands-parents — la couleur d'un bébé ne dépend que de ses deux parents et de leurs quatre grands-parents. La génération cible est la génération la plus élevée atteignable à partir des couleurs présentes dans les arbres des deux parents.",
     "probabilityTitle": "Probabilité de la génération cible",
     "probability": "Le bébé a une chance de base de 30% d'être de la génération cible, plus 0,15% par niveau de monture cumulé sur les deux parents (deux parents niveau 200 ajoutent 60%), plus 10% si un consommable Optimakina est utilisé, plafonné à 100%. Une fois par an, un bonus Almanax (jour de Takeza) ajoute 20% supplémentaires.",
-    "example": "En pratique : deux parents niveau 200 avec exactement les bonnes couleurs de recette donnent 90% de chance d'obtenir le bébé désiré (100% avec un Optimakina). Le nombre d'accouplements attendu pour un bébé désiré est 1 divisé par cette chance.",
+    "example": "En pratique : deux parents niveau 200 avec exactement les bonnes couleurs de recette donnent 90% de chance d'obtenir le bébé désiré (100% avec un Optimakina). Le nombre d'accouplements attendu pour un bébé désiré est 1 divisé par cette chance — encore divisé par deux si un parent porte la capacité Reproducteur, puisqu'un accouplement donne alors deux bébés.",
+    "recipesTitle": "Plusieurs façons d'obtenir une couleur",
+    "recipes": "Une couleur de Dragodinde n'a qu'une seule recette. Une couleur de Muldo ou de Volkorne peut en avoir jusqu'à douze, toutes donnant la même couleur à partir de couples différents. Dragoarbre en choisit une pour vous : celle dont l'arbre complet coûte le moins de captures sauvages, puisque les captures sont la seule chose pour laquelle il faut sortir de l'enclos. Laquelle gagne dépend de vos hypothèses — le clonage comme le Reproducteur rendent les recettes profondes relativement moins chères — le choix change donc avec les réglages. Le panneau de détail liste toujours toutes les recettes avec leur prix, et n'importe quel nœud de l'arbre peut révéler les siennes.",
     "residualTitle": "Si la couleur cible n'est pas unique",
-    "residual": "Pour les Dragodindes, chaque couleur n'a qu'un seul croisement possible : quand la génération cible est atteinte, il n'y a donc qu'une seule couleur possible, sans répartition nécessaire. Si plusieurs couleurs étaient possibles, la probabilité de la génération cible serait répartie entre elles selon le poids généalogique. La probabilité restante est répartie entre les couleurs des parents, des grands-parents et les croisements valides entre les deux arbres — les parents pèsent plus que les grands-parents, les générations élevées sont moins probables, et les couleurs présentes plusieurs fois dans les arbres sont plus probables. Ces poids exacts ne sont pas documentés publiquement, donc Dragoarbre présente cette partie comme une information qualitative uniquement, jamais comme un calcul exact."
-  },
-  "roadmap": {
-    "title": "Feuille de route",
-    "phase2": "La phase 2 ajoutera un planificateur de liste de courses : choisissez une couleur cible et découvrez combien de montures de chaque génération inférieure sont nécessaires, en utilisant les calculs de probabilité ci-dessus.",
-    "phase3": "La phase 3 ajoutera les deux autres espèces de montures, les Muldos et les Volkornes."
+    "residual": "Quand la génération cible est atteinte, la couleur obtenue se décide parmi les couleurs que cette génération autorise. Si un même couple pouvait produire plusieurs couleurs de cette génération, la probabilité se répartit entre elles et il faut proportionnellement plus d'accouplements. Dans les données livrées avec Dragoarbre, aucun couple n'est dans ce cas — un test le vérifie — donc atteindre la génération cible signifie obtenir la couleur visée. La probabilité restante est répartie entre les couleurs des parents, des grands-parents et les croisements valides entre les deux arbres : les parents pèsent plus que les grands-parents, les générations élevées sont moins probables, et les couleurs présentes plusieurs fois sont plus probables. Ces poids exacts ne sont pas documentés publiquement, donc Dragoarbre présente cette partie comme une information qualitative uniquement, jamais comme un calcul exact."
   },
   "footer": {
     "disclaimer": "Dragoarbre est un projet de fan non officiel. Dofus est une marque déposée d'Ankama. Dragoarbre n'est affilié à, approuvé par, ou sponsorisé par Ankama.",
@@ -188,7 +185,7 @@
     "copyLinkDone": "Lien copié",
     "assumptions": {
       "title": "Ce que ce modèle suppose",
-      "intro": "Quatre simplifications assumées. Ce sont elles qui rendent un chiffre unique possible — lisez-les avant de vous fier aux résultats.",
+      "intro": "Cinq simplifications assumées. Ce sont elles qui rendent un chiffre unique possible — lisez-les avant de vous fier aux résultats.",
       "cleanGenealogyTitle": "Généalogie propre",
       "cleanGenealogy": "Chaque accouplement utilise des parents dont les couleurs sont exactement celles de la recette et dont les arbres généalogiques n’introduisent aucun autre résultat possible à la génération cible. Le bébé désiré est alors la seule possibilité à cette génération, et sa probabilité est exactement le chiffre ci-dessus. C’est ainsi que les joueurs élèvent réellement une lignée.",
       "failedBirthsTitle": "Les échecs ne sont pas recyclés",

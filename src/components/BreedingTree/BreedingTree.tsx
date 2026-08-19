@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MountColor } from '../../data'
-import { computeTreeLayout, NODE_HEIGHT, NODE_WIDTH } from './layout'
+import { COLUMN_WIDTH, computeTreeLayout, MAX_PER_ROW, NODE_HEIGHT, NODE_WIDTH } from './layout'
 import { TreeNode } from './TreeNode'
 import { usePanZoom } from './usePanZoom'
 
@@ -13,6 +13,13 @@ export type NodeState = 'selected' | 'lineage' | 'dimmed' | 'idle'
  * 19-colour generation into a laptop pane would need about 0.24.
  */
 const MIN_READABLE_SCALE = 0.85
+/**
+ * How far below {@link MIN_READABLE_SCALE} the opening view may go *if* that
+ * is what makes the whole width fit. Fitting beats the extra pixel of label:
+ * a tree you can see all of is worth more than one you must pan to read. Below
+ * this it stops being worth it, and the view stays readable and scrolls.
+ */
+const MIN_FIT_SCALE = 0.7
 /** Gap above generation 1 when the view opens or is reset. */
 const TOP_MARGIN = 12
 
@@ -70,9 +77,14 @@ export function BreedingTree({
   onToggleReveal,
 }: BreedingTreeProps) {
   const { t } = useTranslation()
-  const layout = useMemo(() => computeTreeLayout(colors), [colors])
   const containerRef = useRef<HTMLDivElement | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
+  // How many colours fit side by side at a legible zoom, measured rather than
+  // guessed from a breakpoint: the tree's usable width is what actually
+  // decides this, and it is not the viewport width on any screen with a panel
+  // beside it. Starts at the default so the first paint is never empty.
+  const [perRow, setPerRow] = useState(MAX_PER_ROW)
+  const layout = useMemo(() => computeTreeLayout(colors, perRow), [colors, perRow])
   // The SVG is what zoom anchors against: its box is the viewport the tree is
   // seen through, and its pixel space is the transform's own.
   const { state, handlers, nativeHandlers, zoomIn, zoomOut, setView } = usePanZoom(
@@ -101,11 +113,17 @@ export function BreedingTree({
     const rect = container.getBoundingClientRect()
     if (rect.width === 0 || rect.height === 0) return
     // Fit the *width*, anchored at the top, rather than squeezing the whole
-    // tree into view. A generation-10 row is 19 colours wide, so fitting both
-    // axes lands around 22% zoom, where no label is readable. Since the wheel
-    // now scrolls, the useful starting point is generation 1 at a legible size
-    // with the rest of the tree below you — the way a document opens.
-    const scale = Math.min(1, Math.max(MIN_READABLE_SCALE, (rect.width / layout.width) * 0.98))
+    // tree into view. Fitting both axes lands around 22% zoom on a full tree,
+    // where no label is readable. Since the wheel now scrolls, the useful
+    // starting point is generation 1 at a legible size with the rest below —
+    // the way a document opens.
+    //
+    // When the width very nearly fits, though, fitting wins: flooring at the
+    // readable scale used to push a mobile tree 19px over its own container,
+    // so it opened needing a horizontal pan to see two columns.
+    const widthFit = (rect.width / layout.width) * 0.98
+    const scale =
+      widthFit >= MIN_FIT_SCALE ? Math.min(1, widthFit) : Math.min(1, MIN_READABLE_SCALE)
     setView({
       x: (rect.width - layout.width * scale) / 2,
       y: TOP_MARGIN,
@@ -113,11 +131,37 @@ export function BreedingTree({
     })
   }, [layout, setView])
 
-  useLayoutEffect(() => {
+  /** Reads the container and re-derives the row cap and the opening view. */
+  const measure = useCallback(() => {
+    const width = containerRef.current?.getBoundingClientRect().width ?? 0
+    // A 0-width read means layout has not settled; leave the cap alone and wait
+    // for the next trigger rather than pinning the tree to one colour per row.
+    if (width === 0) return
+    const fits = Math.floor(width / (COLUMN_WIDTH * MIN_READABLE_SCALE))
+    setPerRow(Math.min(MAX_PER_ROW, Math.max(1, fits)))
     fitToContainer()
-    window.addEventListener('resize', fitToContainer)
-    return () => window.removeEventListener('resize', fitToContainer)
   }, [fitToContainer])
+
+  // Three triggers, because no one of them is reliable on its own. The
+  // immediate read races the flex layout it depends on and can see 0; the
+  // animation frame catches the settled box; the observer catches later changes
+  // such as the detail panel appearing beside the tree. `measure` is idempotent,
+  // so running it more than once costs nothing.
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    measure()
+    const frame = requestAnimationFrame(measure)
+    window.addEventListener('resize', measure)
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => measure())
+    observer?.observe(container)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('resize', measure)
+      observer?.disconnect()
+    }
+  }, [measure])
 
   const edges = useMemo(() => {
     const lines: { id: string; x1: number; y1: number; x2: number; y2: number }[] = []
@@ -151,7 +195,11 @@ export function BreedingTree({
         ref={svgRef}
         role="img"
         aria-label={t('tree.title')}
-        className="h-full w-full touch-none"
+        // `absolute inset-0` rather than `h-full`: the container sets only
+        // `min-height`, so its `height` stays `auto` and a percentage height
+        // never resolves — the SVG fell back to the CSS default replaced-element
+        // box, 300x150, and showed six colours on a phone.
+        className="absolute inset-0 h-full w-full touch-none"
         onPointerDown={handlers.onPointerDown}
         onPointerMove={handlers.onPointerMove}
         onPointerUp={handlers.onPointerUp}
@@ -201,7 +249,7 @@ export function BreedingTree({
           type="button"
           onClick={zoomOut}
           aria-label={t('tree.zoomOut')}
-          className="h-8 w-8 rounded border border-(--color-border) bg-(--color-panel-raised) text-lg leading-none text-(--color-text) hover:border-(--color-accent)"
+          className="h-11 w-11 rounded border border-(--color-border) bg-(--color-panel-raised) text-lg leading-none text-(--color-text) hover:border-(--color-accent) md:h-8 md:w-8"
         >
           −
         </button>
@@ -209,7 +257,7 @@ export function BreedingTree({
           type="button"
           onClick={fitToContainer}
           aria-label={t('tree.resetView')}
-          className="h-8 rounded border border-(--color-border) bg-(--color-panel-raised) px-2 text-xs text-(--color-text) hover:border-(--color-accent)"
+          className="h-11 rounded border border-(--color-border) bg-(--color-panel-raised) px-3 text-xs text-(--color-text) hover:border-(--color-accent) md:h-8 md:px-2"
         >
           {t('tree.resetView')}
         </button>
@@ -217,7 +265,7 @@ export function BreedingTree({
           type="button"
           onClick={zoomIn}
           aria-label={t('tree.zoomIn')}
-          className="h-8 w-8 rounded border border-(--color-border) bg-(--color-panel-raised) text-lg leading-none text-(--color-text) hover:border-(--color-accent)"
+          className="h-11 w-11 rounded border border-(--color-border) bg-(--color-panel-raised) text-lg leading-none text-(--color-text) hover:border-(--color-accent) md:h-8 md:w-8"
         >
           +
         </button>

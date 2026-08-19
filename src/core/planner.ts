@@ -9,7 +9,7 @@
  * no mutation of the game data (see `docs/DATA.md`).
  *
  * Source: `BRIEF-phase-2.md`, sections 2 and 3, extended by `BRIEF-phase-3.md`
- * section 7. The four modelling assumptions (clean genealogy, failed births not
+ * section 7. The modelling assumptions (clean genealogy, failed births not
  * salvaged, genders ignored, cloning amortised) are recorded in
  * `docs/DECISIONS.md` and surfaced in the planner UI — the numbers below are
  * expectations, not guarantees, except when {@link BreedingPlan.guaranteed} is
@@ -237,7 +237,14 @@ export interface BreedingPlan {
   settings: PlannerSettings
   /** Per-mating target-generation success probability `p` (0-1). */
   chance: number
-  /** `1 / p` — expected matings per desired baby. */
+  /**
+   * Expected matings per desired baby: `1 / (p * births)`.
+   *
+   * Divides by births, not just by `p`. With the Reproducteur capacity one
+   * mating yields two babies, so it buys twice the successes for the same two
+   * parents — reporting `1 / p` here made this headline read the same with the
+   * capacity on and off while every total beneath it halved.
+   */
   expectedMatingsPerSuccess: number
   /** True when `p` is 1: every count below is then an exact integer. */
   guaranteed: boolean
@@ -615,6 +622,7 @@ export function computePlan(
 
   const chance = planChance(settings)
   const factor = parentConsumptionFactor(settings.cloning)
+  const births = birthsPerMating(settings.reproducteur)
   const rankings = rankAllRecipes(settings, colors)
 
   /** Mounts of each colour the plan needs, accumulated as the sweep descends. */
@@ -695,7 +703,10 @@ export function computePlan(
     quantity,
     settings,
     chance,
-    expectedMatingsPerSuccess: expectedMatingsForTargetGeneration(chance),
+    // `births` folded in here rather than inside the breeding helper: that
+    // function answers "how many tries for one success at probability p", which
+    // is right; how many babies a try yields is the planner's business.
+    expectedMatingsPerSuccess: expectedMatingsForTargetGeneration(chance * births),
     guaranteed: chance >= 1,
     captures,
     colors: planned,

@@ -795,7 +795,7 @@ width-fitted at the top with a legible-zoom floor instead of fitting both axes.
 species it matters most for. Their widest generation holds 50 colours, so
 turning the tree put them at 8660px wide — about eleven screens, on exactly the
 axis the wheel had just stopped scrolling. Wrapping at 12 brings Seemyool to
-2124 × 1630, which is a column you scroll. The two changes only work together;
+2144 × 1630, which is a column you scroll. The two changes only work together;
 either alone is a regression.
 
 Fitting both axes had to go for the same reason. At full extent the tree sits
@@ -840,3 +840,97 @@ colours rendered with a `#666` fallback** — every Seemyool and Rhineetle node
 was grey. The lookup now strips the species prefix, and the eight colour names
 only the new species carry were added. The palette stays explicitly decorative
 and is not game data.
+
+---
+
+## 2026-08-19 — Test the pure logic that broke, not the components
+
+**Context:** Every bug this project has shipped lived in the same place. A
+swatch lookup keyed by bare Dragoturkey ids greyed out 240 of 306 colours; zoom
+scaled about the transform origin and drifted; a ref dereferenced inside a
+`setState` updater unmounted the tree mid-drag; an SVG sized `h-full` inside a
+`min-height`-only parent collapsed to 150px on a phone. There were 188 tests at
+the time and not one touched `src/components/`, `src/pages/` or `src/hooks/`.
+
+**Decision:** Add unit tests for the pure modules that happen to live under
+`components/` — `layout.ts`, `palette.ts` — plus `names.ts` and `search.ts`.
+No DOM test environment.
+
+**Consequences:** The honest scorecard is that this catches one of those four
+bugs outright (the grey swatches, as a property over all 306 colours) and would
+catch the layout collapse only if it had been a maths error rather than a CSS
+one. That is still the best available trade: those modules never needed a DOM,
+they were untested because of their folder, and the tests cost nothing to run.
+
+happy-dom or `@testing-library/react` was considered and declined. It would
+cover component conditionals, but it would have caught **none** of the four:
+it reports zero-sized boxes, so every layout-dependent path degrades to a
+fallback, and it models neither passive listeners nor pointer capture. It also
+drags i18next's initialisation into every test. Revisit if a second contributor
+appears.
+
+The remaining two bugs point elsewhere, and it is worth being clear about it:
+the crash was flagged by a lint warning that was waved through as pre-existing
+style noise, and the passive-listener failure is only observable in a real
+browser. Those are a policy question and a browser question, not test-coverage
+questions.
+
+Writing the tests immediately paid for itself twice: `computeTreeLayout` had no
+guard against a non-finite row cap (`Math.max(1, NaN)` is `NaN`, which would
+have placed every node at `NaN`), and the docs quoted the Seemyool canvas as
+2124 × 1630 when it is 2144 — a number taken from node positions, which stop
+20px short of the canvas edge because `COLUMN_WIDTH` exceeds `NODE_WIDTH`.
+
+---
+
+## 2026-08-19 — The tree fits its pane, on every screen
+
+**Context:** At 375px the tree was unusable: the container asked for 420px of
+height but the `<svg className="h-full">` inside it resolved `height: 100%`
+against a parent whose `height` was `auto` (only `min-height` was set), so it
+fell back to the CSS default replaced-element box of 300×150. Six of 66 colours
+were visible, and zooming fully out still showed six, because the canvas was
+2144px wide against a 341px viewport.
+
+**Decision:** Three changes that only work together. The SVG is positioned
+`absolute inset-0` inside its already-`relative` container, so it has a
+definite box. The row cap became a parameter that `BreedingTree` derives from
+the measured container width. And the opening view lets a fitting scale beat
+the readability floor when the two are close.
+
+**Consequences:** The tree now fits its pane horizontally on every screen and
+scrolls only vertically — which is the axis the wheel was rebound to, so the
+two decisions finally agree. A phone gets 2 columns at 0.79 zoom with the width
+fitting; a 786px desktop pane gets 5.
+
+That desktop number is a visible change: it used to be 12 columns and 2144px,
+needing a horizontal drag. Fitting the pane is the more coherent rule, but it
+does make a generation of 19 colours span four sub-rows rather than two, so the
+generation structure reads less immediately than it did. Worth revisiting if it
+proves annoying in use.
+
+Measuring the container turned out to need three triggers — an immediate read,
+an animation frame, and a `ResizeObserver` — because the immediate read races
+the flex layout it depends on. A one-shot read pinned the desktop tree to one
+colour per row.
+
+---
+
+## 2026-08-19 — Search folds accents
+
+**Context:** `matchesSearch` lowercased but did not normalise, so on the live
+site "ebene" matched nothing while "Ébène" matched eleven colours. The same
+held for "emeraude" and "doree". Most French colour names carry an accent and
+almost nobody types them, least of all on a phone.
+
+**Decision:** Normalise to NFD and strip `\p{Diacritic}` on both the needle and
+the names.
+
+**Consequences:** The search box now works the way a French player would type.
+`src/data/species.ts` already sorted accent-insensitively via `localeCompare`
+with `sensitivity: 'base'`, so this is the established intent applied to
+matching rather than a new one.
+
+Pinned by `search.test.ts` with the exact strings that failed. The tests were
+written first, against the old behaviour, so the fix landed as a visible
+red-to-green diff rather than as an unverifiable claim.

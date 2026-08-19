@@ -718,6 +718,29 @@ describe('computePlan — Reproducteur', () => {
     expect(pair?.matings).toBe(0.5)
   })
 
+  test('the matings-per-baby headline halves too, instead of ignoring births', () => {
+    // This one shipped wrong: the headline was 1 / p and ignored births, so it
+    // read identically with the capacity on and off while every total beneath
+    // it halved — the planner contradicting itself on one screen.
+    const before = computePlan('indigo', 1, plain)
+    const after = computePlan('indigo', 1, repro)
+    expect(after?.expectedMatingsPerSuccess).toBeCloseTo(
+      (before?.expectedMatingsPerSuccess ?? 0) / 2,
+      9,
+    )
+  })
+
+  test('it agrees with what the target pair actually costs', () => {
+    // With split = 1, matings per baby is exactly the inverse of one pair's
+    // successes per mating. If these two ever disagree, one of them is lying.
+    for (const config of [plain, repro, DEFAULT_PLANNER_SETTINGS]) {
+      const plan = computePlan('indigo', 1, config)
+      const pair = plan?.pairs.find((entry) => entry.childId === 'indigo')
+      expect(pair?.split).toBe(1)
+      expect(plan?.expectedMatingsPerSuccess).toBeCloseTo(1 / (pair?.successesPerMating ?? 1), 9)
+    }
+  })
+
   test('halves the Indigo reference vector', () => {
     // Without it: 3 matings, capturing 2 Almond + 1 Golden + 1 Ginger.
     const before = computePlan('indigo', 1, plain)

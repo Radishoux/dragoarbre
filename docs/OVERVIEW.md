@@ -204,6 +204,17 @@ colors — is modeled as exact math.
   100, 400 at 200), the capture spell is « Apprivoisement de monture », and the
   two sources disagree on wild-mount level — recorded rather than resolved.
 
+- **Phase 5 — correctness and reach (done):** an audit of the live site found
+  the app stating four things that were not true and a screen size it could not
+  serve. The planner's "matings per baby" ignored the Reproducteur capacity and
+  read identically with it on and off; the "How breeding works" page still
+  described the phase 1/2 world, announcing shipped phases as future and
+  claiming every colour has one recipe; the assumptions panel promised four and
+  listed five; and search ignored accents, so "ebene" found nothing while
+  "Ébène" found eleven. On a phone the tree showed six of 66 colours and could
+  not be zoomed out to fit. All fixed, and the pure modules behind them now have
+  unit tests — the layer every shipped bug has come from.
+
 ### Ideas, not commitments
 
 Nothing below is planned or promised; they are the directions that looked

@@ -6,6 +6,7 @@ const SECTIONS = [
   { titleKey: 'howItWorks.cloningTitle', bodyKey: 'howItWorks.cloning' },
   { titleKey: 'howItWorks.genealogyTitle', bodyKey: 'howItWorks.genealogy' },
   { titleKey: 'howItWorks.probabilityTitle', bodyKey: 'howItWorks.probability' },
+  { titleKey: 'howItWorks.recipesTitle', bodyKey: 'howItWorks.recipes' },
   { titleKey: 'howItWorks.residualTitle', bodyKey: 'howItWorks.residual' },
 ] as const
 
@@ -31,12 +32,6 @@ export function HowBreedingWorksPage() {
 
       <section className="rounded-lg border border-(--color-accent) bg-(--color-panel) p-4">
         <p className="text-sm text-(--color-text)">{t('howItWorks.example')}</p>
-      </section>
-
-      <section className="rounded-lg border border-(--color-border) bg-(--color-panel) p-4">
-        <h2 className="mb-1 text-base font-semibold text-(--color-text)">{t('roadmap.title')}</h2>
-        <p className="text-sm text-(--color-text-muted)">{t('roadmap.phase2')}</p>
-        <p className="mt-1 text-sm text-(--color-text-muted)">{t('roadmap.phase3')}</p>
       </section>
     </article>
   )

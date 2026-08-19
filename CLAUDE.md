@@ -165,3 +165,26 @@ Reproducteur second baby rolling independently).
   hotlinking — the phase 1 policy, applied.
 
 `docs/DECISIONS.md` carries the full reasoning for each.
+
+## Judgment calls made during phase 5 (correctness and reach)
+
+- **Tests cover the pure logic that actually broke**, not components. No DOM
+  environment: happy-dom would add dependencies and catch none of the four bugs
+  this project has shipped, because it reports zero-sized boxes and models
+  neither passive listeners nor pointer capture. `layout.ts`, `palette.ts`,
+  `names.ts` and `search.ts` were untested because of their folder, not their
+  shape.
+- **The tree fits its pane on every screen.** The row cap is measured from the
+  container rather than fixed at 12, which changes the desktop tree from 12
+  columns to about 5 — a deliberate trade for removing horizontal panning
+  everywhere and matching the wheel's vertical scroll.
+- **Measuring a container needs three triggers** (immediate read, animation
+  frame, `ResizeObserver`); a one-shot read races the flex layout and pinned the
+  desktop tree to one colour per row.
+- **`expectedMatingsPerSuccess` folds in births.** Reporting `1 / p` made the
+  planner's headline read identically with the Reproducteur on and off while
+  every total beneath it halved.
+- **Search folds accents**, because most French colour names carry one and
+  nobody types them.
+
+`docs/DECISIONS.md` carries the full reasoning for each.

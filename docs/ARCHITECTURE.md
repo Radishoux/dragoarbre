@@ -177,10 +177,23 @@ The tree runs down rather than across because that is how it is read and
 scrolled: generation 1 is where a plan starts, and the wheel walks you forward
 through the generations.
 
-**Generations wider than `MAX_PER_ROW` (12) wrap onto sub-rows.** Turning the
+**Generations wider than the row cap wrap onto sub-rows**, and the cap is
+responsive: `computeTreeLayout(colors, maxPerRow)` takes it as a parameter and
+`BreedingTree` derives it from the container's measured width, so the tree fits
+its pane at a legible zoom on any screen — about 2 columns on a 375px phone, 5
+in a 786px desktop pane. The default of `MAX_PER_ROW` (12) applies when no cap
+is given.
+
+Measuring that width needs three triggers, because none is reliable alone: an
+immediate read (which races the flex layout and can see 0), a
+`requestAnimationFrame` (which catches the settled box), and a `ResizeObserver`
+(which catches later changes, such as the detail panel appearing beside the
+tree). The measure function is idempotent, so running it repeatedly costs
+nothing — and a one-shot read alone pinned the desktop tree to one colour per
+row until the extra triggers were added. Turning the
 tree without this made the two new species 8660px wide — their widest
 generation holds 50 colours — which is about eleven screens on the one axis the
-wheel does not scroll. Wrapping puts Seemyool at 2124 × 1630 instead: a column
+wheel does not scroll. Wrapping puts Seemyool at 2144 × 1630 instead: a column
 you scroll, which is the whole point of the orientation.
 
 Wrapping is also why the y cursor accumulates per generation instead of being
@@ -239,7 +252,9 @@ current state, which is impure and runs twice in development; they read a ref
 that mirrors state instead.
 
 The opening view fits the **width** and anchors at the top rather than fitting
-both axes. Fitting both put the full tree at about 22% zoom, where a 12px label
+both axes. When the width nearly fits, fitting wins over the readability floor
+— flooring unconditionally pushed a mobile tree 19px past its own container, so
+it opened needing a horizontal pan to see two columns. Fitting both put the full tree at about 22% zoom, where a 12px label
 is unreadable; the view now opens like a document, generation 1 at the top, with
 a floor of 0.85 so labels stay legible and the rest of the tree is a scroll
 away.
@@ -556,6 +571,28 @@ same list while every colour had one recipe; with several they are not, and the
 union walk would lay out 28 colours for a Rhineetle Plum whose plan breeds 11 —
 17 nodes with no badge and, since the plan mates no pair for them, no edges
 either.
+
+## Testing
+
+`bun test` runs 236 tests across 12 files, all pure: data integrity, the
+breeding and planner math, URL encoding, and — added later — the pure modules
+that happen to live under `components/`.
+
+That last group exists because of a pattern worth naming. Every bug this
+project has shipped to production lived in the untested layer: a swatch lookup
+that greyed out 240 of 306 colours, a zoom that drifted because it scaled about
+the transform origin, a crash that unmounted the tree mid-drag, an SVG that
+collapsed to 150px on a phone. None of those files needed a DOM to be tested —
+`layout.ts`, `palette.ts`, `names.ts` and `search.ts` are ordinary pure
+functions that were untested purely because of which folder they sat in.
+
+No DOM test environment is installed, deliberately. happy-dom or jsdom would
+add dependencies and cover component conditionals, but it would have caught
+none of the four bugs above: it reports zero-sized boxes, so every
+layout-dependent path degrades, and it does not model passive listeners or
+pointer capture. The pure extraction is where the value is. The remainder —
+`toLocal`, `centre`, the handler wiring — is a few branch-free adapters, and is
+accepted as untested.
 
 ## i18n setup
 

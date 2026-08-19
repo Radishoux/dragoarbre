@@ -15,12 +15,17 @@ export const NODE_HEIGHT = 44
 const PADDING = 40
 
 /**
- * Most colours placed side by side before a generation wraps onto another row.
+ * Default colours placed side by side before a generation wraps onto another
+ * row.
  *
  * Without a cap the widest generation sets the canvas width, and the two new
  * species have a 50-colour generation — 8660px, about eleven screens, on the
  * one axis the wheel does not scroll. Twelve keeps the canvas near 2000px, so
  * the tree stays a column you scroll down rather than a strip you drag across.
+ *
+ * Callers narrow it further on small screens: a phone cannot show twelve
+ * columns at a legible zoom, and wrapping harder trades width — which it has
+ * none of — for height, which it can scroll. See {@link computeTreeLayout}.
  */
 export const MAX_PER_ROW = 12
 /** Vertical gap between two sub-rows of the same generation. */
@@ -52,9 +57,18 @@ export interface TreeLayout {
  * here assumes generations start at 1 or are contiguous.
  *
  * @param colors - the colours to place; an empty list yields an empty canvas.
+ * @param maxPerRow - how many colours may sit side by side before wrapping.
+ *   Defaults to {@link MAX_PER_ROW}. A non-finite value falls back to that
+ *   default and anything below 1 is treated as 1: a container measured
+ *   mid-layout can report 0 or NaN, and `index % NaN` would put every node at
+ *   NaN rather than merely looking wrong.
  * @returns absolute node positions plus the SVG canvas size that contains them.
  */
-export function computeTreeLayout(colors: readonly MountColor[]): TreeLayout {
+export function computeTreeLayout(
+  colors: readonly MountColor[],
+  maxPerRow: number = MAX_PER_ROW,
+): TreeLayout {
+  const perRow = Number.isFinite(maxPerRow) ? Math.max(1, Math.floor(maxPerRow)) : MAX_PER_ROW
   const byGeneration = new Map<number, MountColor[]>()
   for (const color of colors) {
     const bucket = byGeneration.get(color.generation) ?? []
@@ -67,7 +81,7 @@ export function computeTreeLayout(colors: readonly MountColor[]): TreeLayout {
   // would poison the canvas width when there is nothing to lay out at all.
   const widest = Math.max(
     0,
-    ...[...byGeneration.values()].map((bucket) => Math.min(bucket.length, MAX_PER_ROW)),
+    ...[...byGeneration.values()].map((bucket) => Math.min(bucket.length, perRow)),
   )
   const contentWidth = widest * COLUMN_WIDTH
 
@@ -83,18 +97,18 @@ export function computeTreeLayout(colors: readonly MountColor[]): TreeLayout {
   for (const generation of generations) {
     const bucket = byGeneration.get(generation) ?? []
     bucket.forEach((color, index) => {
-      const subRow = Math.floor(index / MAX_PER_ROW)
-      const column = index % MAX_PER_ROW
+      const subRow = Math.floor(index / perRow)
+      const column = index % perRow
       // Each sub-row is centred on its own width, so a generation's last,
       // partly-filled row sits under the middle of the ones above it.
-      const inRow = Math.min(bucket.length - subRow * MAX_PER_ROW, MAX_PER_ROW)
+      const inRow = Math.min(bucket.length - subRow * perRow, perRow)
       const xOffset = PADDING + (contentWidth - inRow * COLUMN_WIDTH) / 2
       positions.set(color.id, {
         x: xOffset + column * COLUMN_WIDTH,
         y: cursor + subRow * SUB_ROW_HEIGHT,
       })
     })
-    const subRows = Math.max(1, Math.ceil(bucket.length / MAX_PER_ROW))
+    const subRows = Math.max(1, Math.ceil(bucket.length / perRow))
     cursor += (subRows - 1) * SUB_ROW_HEIGHT + ROW_HEIGHT
   }
 

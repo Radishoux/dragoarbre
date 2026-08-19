@@ -1,8 +1,8 @@
 /**
  * Dofus 3.5 mount breeding mechanics — documented constants and pure
- * functions. Phase 1 only surfaces these as informational content (the
- * "How breeding works" page); phase 2's shopping-list planner will call
- * {@link targetGenerationChance} directly for its expected-value math.
+ * functions. Surfaced as informational content on the "How breeding works"
+ * page, and called directly by `src/core/planner.ts` for its expected-value
+ * math — {@link targetGenerationChance} is the formula every plan rests on.
  *
  * Source: `BRIEF-phase-1.md`, section 4. Only the target-generation formula
  * is modelled as exact math — the brief is explicit that the residual
@@ -24,7 +24,11 @@ export const BREEDING_CONSTANTS = {
   /** One mating yields 1 baby, or 2 if a parent has the Reproducer capacity. */
   babiesPerMating: 1,
   babiesPerMatingWithReproducer: 2,
-  /** One breeding couple yields at most 1 baby + 1 clone from the spent parents. */
+  /**
+   * Mounts one breeding couple yields: 1 baby + 1 clone from the spent
+   * parents. Three when a parent carries the Reproducer capacity, since the
+   * mating then gives two babies — see {@link babiesPerMatingWithReproducer}.
+   */
   maxMountsPerCouple: 2,
 } as const
 
